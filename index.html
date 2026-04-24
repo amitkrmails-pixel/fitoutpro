@@ -1,1033 +1,1061 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, MapPin, Briefcase, ChevronRight, Menu, X, 
-  Building2, Calculator, PencilRuler, FileText, 
-  ShoppingCart, ShieldCheck, TrendingUp, Wallet, 
-  Truck, Package, HardHat, FileLineChart, Bookmark,
-  CheckCircle2, Users, FileBarChart, Monitor, Upload, Star
-} from 'lucide-react';
-
-// --- DUMMY DATA ---
-
-const JOB_CATEGORIES = [
-  { id: 'pm', icon: HardHat, title: 'Project Management', desc: 'For project managers, site leads, execution heads, and operations professionals.', count: 145 },
-  { id: 'qs', icon: FileLineChart, title: 'Quantity Surveying', desc: 'For QS professionals handling measurements, BOQ checking, and commercial tracking.', count: 82 },
-  { id: 'est', icon: Calculator, title: 'Estimation & Tendering', desc: 'For estimation engineers preparing BOQs, costing, and bid submissions.', count: 56 },
-  { id: 'bill', icon: FileText, title: 'Billing & Contracts', desc: 'For billing engineers, contract executives, and RA bill preparation.', count: 94 },
-  { id: 'des', icon: PencilRuler, title: 'Design Coordination', desc: 'For design coordinators, AutoCAD draftsmen, 3D visualizers, and shop drawing teams.', count: 112 },
-  { id: 'proc', icon: ShoppingCart, title: 'Procurement', desc: 'For executives handling vendor development, material sourcing, and POs.', count: 68 },
-  { id: 'mep', icon: Building2, title: 'MEP Coordination', desc: 'For HVAC, electrical, plumbing, firefighting, and services coordination roles.', count: 75 },
-  { id: 'qa', icon: ShieldCheck, title: 'QA/QC & HSE', desc: 'For quality engineers, safety officers, site safety, and handover quality control.', count: 43 },
-  { id: 'bd', icon: TrendingUp, title: 'Business Development', desc: 'For sales, client acquisition, lead generation, and new project enquiries.', count: 51 },
-  { id: 'acc', icon: Wallet, title: 'Accounts & Finance', desc: 'For project accounts, vendor payments, GST/TDS, and client invoicing.', count: 39 },
-  { id: 'run', icon: Truck, title: 'Runner / Office Support', desc: 'For document collection, material sample movement, and site-to-office coordination.', count: 28 },
-  { id: 'store', icon: Package, title: 'Store & Inventory', desc: 'For site store management, material inward/outward records, and stock registers.', count: 61 },
-];
-
-const JOBS = [
-  {
-    id: 1, title: 'Project Manager – Corporate Interior Fit-Out', company: 'UrbanEdge Interiors', location: 'Noida',
-    experience: '8-12 Years', salary: '₹12L - ₹18L PA', type: 'Full-time', dept: 'Project Management',
-    skills: ['Fit-Out Execution', 'MS Project', 'Client Coordination', 'Handover'],
-    posted: '2 days ago',
-    description: 'We are looking for an experienced Project Manager to lead high-end corporate office fit-out projects. The ideal candidate will have a strong background in commercial interiors, managing multiple sites, and ensuring timely delivery within budget.',
-    responsibilities: ['End-to-end project execution', 'Client and architect coordination', 'Monitoring site progress and quality', 'Managing contractors and vendors', 'Ensuring HSE compliance at site']
-  },
-  {
-    id: 2, title: 'QS & Billing Engineer', company: 'Workspace Buildcon', location: 'Gurugram',
-    experience: '4-7 Years', salary: '₹5L - ₹8L PA', type: 'Full-time', dept: 'QS & Billing',
-    skills: ['BOQ', 'RA Bills', 'Rate Analysis', 'Excel'],
-    posted: '1 day ago',
-    description: 'Seeking a detail-oriented QS & Billing Engineer for commercial interior projects. You will be responsible for quantity take-offs, checking contractor bills, and preparing client RA bills.',
-    responsibilities: ['Preparation of Client RA Bills', 'Checking and certifying vendor bills', 'Quantity measurement from AutoCAD drawings', 'Reconciliation of materials']
-  },
-  {
-    id: 3, title: 'Design Coordinator – Fit-Out Projects', company: 'DesignAxis Studio', location: 'Bengaluru',
-    experience: '3-6 Years', salary: '₹6L - ₹9L PA', type: 'Full-time', dept: 'Design Coordination',
-    skills: ['AutoCAD', 'Shop Drawings', 'Architect Coordination', '3D Visualizer'],
-    posted: '3 days ago',
-    description: 'Join our design-build team as a Design Coordinator. You will act as the bridge between the design team and site execution team, ensuring all GFC drawings are accurate and constructible.',
-    responsibilities: ['Coordinating with architects and MEP consultants', 'Releasing GFC drawings to site', 'Resolving site design queries', 'Preparing as-built drawings']
-  },
-  {
-    id: 4, title: 'Procurement Manager – Interior Materials', company: 'Apex Fit-Out Solutions', location: 'Mumbai',
-    experience: '6-10 Years', salary: '₹9L - ₹14L PA', type: 'Full-time', dept: 'Procurement',
-    skills: ['Vendor Management', 'Material Sourcing', 'Work Orders', 'Contracts'],
-    posted: '5 hours ago',
-    description: 'We need a strategic Procurement Manager to handle sourcing of interior finishing materials, furniture, and MEP equipment for large-scale corporate projects.',
-    responsibilities: ['Vendor development and onboarding', 'Negotiating rates and commercial terms', 'Issuing POs and Work Orders', 'Ensuring timely delivery of materials to site']
-  },
-  {
-    id: 5, title: 'MEP Coordinator – Commercial Interiors', company: 'Metroline Projects', location: 'Delhi',
-    experience: '5-8 Years', salary: '₹7L - ₹11L PA', type: 'Contract', dept: 'MEP Coordination',
-    skills: ['HVAC Coordination', 'Firefighting', 'Electrical', 'Plumbing'],
-    posted: '1 week ago',
-    description: 'Looking for an MEP Coordinator with strong experience in corporate interior fit-outs. You will ensure all services are clash-free and executed as per design.',
-    responsibilities: ['Reviewing MEP drawings', 'Coordinating between interior and MEP teams', 'Site supervision of MEP works', 'Testing and commissioning assistance']
-  },
-  {
-    id: 6, title: 'Business Development Manager', company: 'Corporate Space Makers', location: 'Pune',
-    experience: '7-12 Years', salary: '₹10L - ₹15L PA + Incentives', type: 'Full-time', dept: 'Business Development',
-    skills: ['Lead Generation', 'Corporate Sales', 'Tender Follow-Up', 'CRM'],
-    posted: '2 days ago',
-    description: 'Drive growth for our fit-out business. We are looking for a BDM with a strong network among architects, PMCs, and corporate real estate heads.',
-    responsibilities: ['Generating new project leads', 'Pitching to corporate clients', 'Follow-up on submitted tenders', 'Achieving sales targets']
-  },
-  {
-    id: 7, title: 'Site Store Incharge', company: 'BuildRight Interiors', location: 'Hyderabad',
-    experience: '2-5 Years', salary: '₹3L - ₹4.5L PA', type: 'Full-time', dept: 'Store & Inventory',
-    skills: ['Site Store', 'Material Inward', 'GRN', 'Stock Register'],
-    posted: '4 days ago',
-    description: 'Manage material inventory at a large corporate fit-out site. Responsible for safe storage, issuance, and record-keeping.',
-    responsibilities: ['Maintaining stock register', 'Preparing GRN', 'Issuing materials to contractors', 'Daily stock reconciliation']
-  },
-  {
-    id: 8, title: 'QA/QC Engineer – Interior Projects', company: 'Prime PMC Services', location: 'Chennai',
-    experience: '4-8 Years', salary: '₹6L - ₹9L PA', type: 'Full-time', dept: 'QA/QC & HSE',
-    skills: ['Snagging', 'Handover', 'Quality Checklists', 'Material Inspection'],
-    posted: 'Just now',
-    description: 'Ensure the highest quality standards are maintained on our premium interior projects. Prepare and execute quality plans.',
-    responsibilities: ['Conducting site inspections', 'Preparing snag lists', 'Checking incoming materials', 'Maintaining QA/QC documentation']
-  }
-];
-
-const COMPANIES = [
-  { name: 'UrbanEdge Interiors', type: 'Design & Build Firm', jobs: 12, logo: 'UI' },
-  { name: 'Workspace Buildcon', type: 'Fit-Out Contractor', jobs: 8, logo: 'WB' },
-  { name: 'Apex Fit-Out Solutions', type: 'Fit-Out Contractor', jobs: 15, logo: 'AF' },
-  { name: 'Metroline Projects', type: 'PMC', jobs: 5, logo: 'MP' },
-  { name: 'DesignAxis Studio', type: 'Architecture Firm', jobs: 7, logo: 'DA' },
-  { name: 'Corporate Space Makers', type: 'Design & Build Firm', jobs: 10, logo: 'CS' },
-];
-
-const LOCATIONS = ['Noida', 'Gurugram', 'Delhi', 'Mumbai', 'Bengaluru', 'Hyderabad', 'Pune', 'Chennai'];
-const EXPERIENCE_LEVELS = ['0-2 Years', '2-5 Years', '5-8 Years', '8-12 Years', '12+ Years'];
-
-
-// --- COMPONENTS ---
-
-const Button = ({ children, variant = 'primary', className = '', ...props }) => {
-  const baseStyle = "inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
-  const variants = {
-    primary: "bg-blue-800 text-white hover:bg-blue-900 focus:ring-blue-800",
-    secondary: "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-600",
-    outline: "border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-blue-800",
-    ghost: "text-slate-600 hover:text-blue-800 hover:bg-blue-50 focus:ring-blue-800"
-  };
-  return (
-    <button className={`${baseStyle} ${variants[variant]} ${className}`} {...props}>
-      {children}
-    </button>
-  );
-};
-
-const JobCard = ({ job, onClick }) => (
-  <div 
-    className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-lg transition-shadow cursor-pointer flex flex-col justify-between h-full group"
-    onClick={() => onClick(job)}
-  >
-    <div>
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-blue-800 transition-colors line-clamp-1">{job.title}</h3>
-          <p className="text-sm text-slate-600 mt-1">{job.company}</p>
-        </div>
-        <button className="text-slate-400 hover:text-blue-600 transition-colors" onClick={(e) => { e.stopPropagation(); /* Add save logic */}}>
-          <Bookmark className="w-5 h-5" />
-        </button>
-      </div>
-      
-      <div className="flex flex-wrap gap-y-2 gap-x-4 mb-4 text-sm text-slate-600">
-        <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {job.location}</span>
-        <span className="flex items-center gap-1"><Briefcase className="w-4 h-4" /> {job.experience}</span>
-        <span className="flex items-center gap-1"><Wallet className="w-4 h-4" /> {job.salary}</span>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        {job.skills.slice(0, 3).map((skill, idx) => (
-          <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
-            {skill}
-          </span>
-        ))}
-        {job.skills.length > 3 && (
-          <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">+{job.skills.length - 3}</span>
-        )}
-      </div>
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitoutJobs - Corporate Interior Fit-Out Job Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
-      <span className="text-xs text-slate-500">{job.posted}</span>
-      <span className="text-sm font-medium text-blue-800 group-hover:underline">View Details</span>
-    </div>
-  </div>
-);
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Utility for line clamp */
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-900 bg-white min-h-screen flex flex-col">
 
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                
+                <!-- Logo -->
+                <div class="flex items-center cursor-pointer" onclick="navigate('home')">
+                    <div class="w-8 h-8 bg-blue-800 rounded-md flex items-center justify-center mr-2">
+                        <i data-lucide="building-2" class="text-white w-5 h-5"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight text-slate-900">
+                        Fitout<span class="text-blue-800">Jobs</span>
+                    </span>
+                </div>
 
-// --- MAIN VIEWS ---
+                <!-- Desktop Nav -->
+                <nav class="hidden md:flex items-center space-x-8" id="desktop-nav">
+                    <!-- Nav items injected by JS -->
+                </nav>
 
-const HomeView = ({ navigate }) => {
-  return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-slate-900 text-white py-20 relative overflow-hidden">
-        {/* Abstract Background pattern */}
-        <div className="absolute inset-0 opacity-10">
-           <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M0 40L40 0H20L0 20M40 40V20L20 40" fill="none" stroke="currentColor" strokeWidth="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid-pattern)" />
-            </svg>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button onclick="toggleMobileMenu()" class="text-slate-600 hover:text-slate-900" id="mobile-menu-btn">
+                        <i data-lucide="menu" class="h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              Find Jobs in <span className="text-blue-400">Corporate Interior Fit-Out</span>
-            </h1>
-            <p className="text-lg text-slate-300 mb-10 leading-relaxed">
-              A dedicated platform for project, design, estimation, billing, procurement, business development, and site coordination roles in the interior contracting industry.
-            </p>
+        <!-- Mobile Nav Dropdown -->
+        <div id="mobile-nav" class="hidden md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-1 shadow-lg absolute w-full z-40">
+            <!-- Mobile nav items injected by JS -->
+        </div>
+    </header>
 
-            {/* Search Box */}
-            <div className="bg-white p-2 rounded-lg shadow-xl flex flex-col md:flex-row gap-2">
-              <div className="flex-1 flex items-center px-4 bg-slate-50 rounded-md border border-slate-200">
-                <Search className="w-5 h-5 text-slate-400 mr-2" />
-                <input 
-                  type="text" 
-                  placeholder="Job title, skills, or keywords" 
-                  className="w-full bg-transparent border-none py-3 focus:outline-none text-slate-900 placeholder-slate-500"
-                />
-              </div>
-              <div className="flex-1 flex items-center px-4 bg-slate-50 rounded-md border border-slate-200">
-                <MapPin className="w-5 h-5 text-slate-400 mr-2" />
-                <select className="w-full bg-transparent border-none py-3 focus:outline-none text-slate-900">
-                  <option value="">Any Location</option>
-                  {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                </select>
-              </div>
-              <Button className="py-3 px-8 text-base" onClick={() => navigate('jobs')}>Search Jobs</Button>
+    <!-- Main Content Area -->
+    <main id="app-main" class="flex-grow">
+        <!-- Views injected by JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="col-span-1 md:col-span-1">
+                <div class="flex items-center mb-4 opacity-90">
+                    <div class="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center mr-2">
+                        <i data-lucide="building-2" class="text-white w-5 h-5"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight text-white">
+                        Fitout<span class="text-blue-400">Jobs</span>
+                    </span>
+                </div>
+                <p class="text-sm text-slate-400 leading-relaxed mb-4">
+                    The premium dedicated job platform connecting top talent with leading corporate interior contracting, PMC, and design-build firms.
+                </p>
             </div>
             
-            <p className="mt-4 text-sm text-slate-400 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400"/>
-              Trusted by leading contractors, PMCs, and design-build firms.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Explore Fit-Out Roles</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto">Find specialized positions tailored to your expertise in commercial interiors.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {JOB_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="bg-white p-6 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-lg transition-all group cursor-pointer" onClick={() => navigate('jobs')}>
-                <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-800 mb-4 group-hover:bg-blue-800 group-hover:text-white transition-colors">
-                  <cat.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{cat.title}</h3>
-                <p className="text-sm text-slate-500 mb-4 line-clamp-2">{cat.desc}</p>
-                <div className="flex items-center text-blue-800 text-sm font-medium">
-                  {cat.count} Open Jobs <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Jobs */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between items-end mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Featured Jobs</h2>
-              <p className="text-slate-600">Latest opportunities from top companies.</p>
-            </div>
-            <Button variant="outline" onClick={() => navigate('jobs')}>View All Jobs</Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {JOBS.slice(0, 8).map(job => (
-              <JobCard key={job.id} job={job} onClick={(j) => { /* Will implement navigate with state */ }} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* For Employers CTA */}
-      <section className="py-20 bg-blue-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-6">Hire Fit-Out Talent Faster</h2>
-          <p className="text-xl text-blue-200 mb-10 max-w-3xl mx-auto">
-            Post jobs and reach experienced professionals from the corporate interior, commercial fit-out, workplace design, and site execution industry. Stop sifting through irrelevant resumes.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button variant="secondary" className="px-8 py-3 text-lg" onClick={() => navigate('post-job')}>Post a Job Now</Button>
-            <Button variant="outline" className="px-8 py-3 text-lg border-blue-400 text-blue-100 hover:bg-blue-800 hover:text-white" onClick={() => navigate('pricing')}>View Pricing</Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Companies */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-slate-900 mb-10 text-center">Top Companies Hiring</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {COMPANIES.map((company, idx) => (
-              <div key={idx} className="bg-white border border-slate-200 p-6 rounded-lg text-center hover:shadow-md transition-shadow cursor-pointer">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-xl font-bold text-slate-400 mx-auto mb-4">
-                  {company.logo}
-                </div>
-                <h4 className="font-semibold text-slate-900 text-sm mb-1 line-clamp-1">{company.name}</h4>
-                <p className="text-xs text-slate-500">{company.type}</p>
-                <div className="mt-4 text-xs font-medium text-blue-800">{company.jobs} Jobs</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-const JobsView = ({ setJobDetail }) => {
-  return (
-    <div className="bg-slate-50 min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-8">
-        
-        {/* Sidebar Filters */}
-        <div className="w-full lg:w-1/4">
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm sticky top-24">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-900">Filters</h3>
-              <button className="text-sm text-blue-800 hover:underline">Clear all</button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Filter Group */}
-              <div>
-                <h4 className="font-semibold text-slate-800 mb-3 text-sm">Department</h4>
-                <div className="space-y-2">
-                  {['Project Management', 'QS & Billing', 'Estimation & Tendering', 'Design Coordination', 'Procurement', 'MEP Coordination', 'QA/QC & HSE'].map(dept => (
-                    <label key={dept} className="flex items-center text-sm text-slate-600 cursor-pointer hover:text-slate-900">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-800 focus:ring-blue-800 mr-2" />
-                      {dept}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Filter Group */}
-              <div>
-                <h4 className="font-semibold text-slate-800 mb-3 text-sm">Location</h4>
-                <div className="space-y-2">
-                  {LOCATIONS.slice(0, 5).map(loc => (
-                    <label key={loc} className="flex items-center text-sm text-slate-600 cursor-pointer hover:text-slate-900">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-800 focus:ring-blue-800 mr-2" />
-                      {loc}
-                    </label>
-                  ))}
-                  <button className="text-sm text-blue-800 mt-2 hover:underline">+ Show more</button>
-                </div>
-              </div>
-
-              {/* Filter Group */}
-              <div>
-                <h4 className="font-semibold text-slate-800 mb-3 text-sm">Experience</h4>
-                <div className="space-y-2">
-                  {EXPERIENCE_LEVELS.map(exp => (
-                    <label key={exp} className="flex items-center text-sm text-slate-600 cursor-pointer hover:text-slate-900">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-800 focus:ring-blue-800 mr-2" />
-                      {exp}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="w-full lg:w-3/4">
-          <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-slate-600 font-medium">Showing <span className="text-slate-900">124</span> jobs in Interior Fit-Out</p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Sort by:</span>
-              <select className="border border-slate-300 rounded-md py-1 px-3 text-sm text-slate-700 focus:outline-none focus:border-blue-500">
-                <option>Latest</option>
-                <option>Most Relevant</option>
-                <option>Salary: High to Low</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {JOBS.map(job => (
-              <JobCard key={job.id} job={job} onClick={() => setJobDetail(job)} />
-            ))}
-          </div>
-
-          <div className="mt-8 flex justify-center">
-             <Button variant="outline" className="px-8 py-2">Load More Jobs</Button>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-const JobDetailView = ({ job, goBack }) => {
-  if (!job) return <div>Job not found</div>;
-
-  return (
-    <div className="bg-slate-50 min-h-screen py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        
-        <button onClick={goBack} className="text-slate-500 hover:text-blue-800 flex items-center text-sm mb-6 font-medium transition-colors">
-          <ChevronRight className="w-4 h-4 rotate-180 mr-1" /> Back to Jobs
-        </button>
-
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          {/* Header */}
-          <div className="p-8 border-b border-slate-100">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">{job.title}</h1>
-                <p className="text-lg text-blue-800 font-medium">{job.company}</p>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" className="p-2"><Bookmark className="w-5 h-5" /></Button>
-                <Button>Apply Now</Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-               <div>
-                 <span className="text-slate-500 block mb-1">Location</span>
-                 <span className="font-semibold text-slate-900 flex items-center gap-1"><MapPin className="w-4 h-4"/> {job.location}</span>
-               </div>
-               <div>
-                 <span className="text-slate-500 block mb-1">Experience</span>
-                 <span className="font-semibold text-slate-900 flex items-center gap-1"><Briefcase className="w-4 h-4"/> {job.experience}</span>
-               </div>
-               <div>
-                 <span className="text-slate-500 block mb-1">Salary</span>
-                 <span className="font-semibold text-slate-900 flex items-center gap-1"><Wallet className="w-4 h-4"/> {job.salary}</span>
-               </div>
-               <div>
-                 <span className="text-slate-500 block mb-1">Job Type</span>
-                 <span className="font-semibold text-slate-900">{job.type}</span>
-               </div>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="p-8 flex flex-col md:flex-row gap-10">
-            <div className="w-full md:w-2/3 space-y-8">
-              <section>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Job Description</h3>
-                <p className="text-slate-700 leading-relaxed">{job.description}</p>
-              </section>
-
-              <section>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Key Responsibilities</h3>
-                <ul className="space-y-3">
-                  {job.responsibilities.map((res, idx) => (
-                    <li key={idx} className="flex items-start">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 shrink-0 mt-0.5" />
-                      <span className="text-slate-700">{res}</span>
-                    </li>
-                  ))}
+                <h4 class="text-white font-semibold mb-4">For Candidates</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><button onclick="navigate('jobs')" class="hover:text-white transition-colors">Browse All Jobs</button></li>
+                    <li><button class="hover:text-white transition-colors">Career Advice</button></li>
+                    <li><button class="hover:text-white transition-colors">Salary Guide</button></li>
+                    <li><button onclick="navigate('login')" class="hover:text-white transition-colors">Create Profile</button></li>
                 </ul>
-              </section>
-
-              <section>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Required Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {job.skills.map((skill, idx) => (
-                    <span key={idx} className="px-3 py-1.5 bg-blue-50 text-blue-800 rounded-md font-medium text-sm border border-blue-100">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </section>
             </div>
 
-            {/* Right Sidebar */}
-            <div className="w-full md:w-1/3">
-              <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-                 <h4 className="font-bold text-slate-900 mb-4">About the Company</h4>
-                 <div className="w-16 h-16 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-xl font-bold text-slate-400 mb-4">
-                  {job.company.substring(0,2).toUpperCase()}
-                </div>
-                <h5 className="font-semibold text-slate-900 mb-2">{job.company}</h5>
-                <p className="text-sm text-slate-600 mb-4">A leading firm in the corporate interior fit-out space, specializing in executing premium workspaces.</p>
-                <Button variant="outline" className="w-full">View Company Profile</Button>
-              </div>
-
-              <div className="mt-6 bg-blue-50 p-6 rounded-lg border border-blue-100 text-center">
-                 <Monitor className="w-8 h-8 text-blue-800 mx-auto mb-3" />
-                 <h4 className="font-bold text-blue-900 mb-2">Want to apply faster?</h4>
-                 <p className="text-sm text-blue-800 mb-4">Upload your resume to pre-fill applications for interior fit-out roles.</p>
-                 <Button className="w-full">Upload Resume</Button>
-              </div>
+            <div>
+                <h4 class="text-white font-semibold mb-4">For Employers</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><button onclick="navigate('post-job')" class="hover:text-white transition-colors">Post a Job</button></li>
+                    <li><button class="hover:text-white transition-colors">Search Resumes</button></li>
+                    <li><button class="hover:text-white transition-colors">Pricing</button></li>
+                    <li><button onclick="navigate('login')" class="hover:text-white transition-colors">Employer Login</button></li>
+                </ul>
             </div>
-          </div>
+
+            <div>
+                <h4 class="text-white font-semibold mb-4">Company</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><button class="hover:text-white transition-colors">About Us</button></li>
+                    <li><button class="hover:text-white transition-colors">Contact</button></li>
+                    <li><button class="hover:text-white transition-colors">Privacy Policy</button></li>
+                    <li><button class="hover:text-white transition-colors">Terms of Service</button></li>
+                </ul>
+            </div>
         </div>
-      </div>
-    </div>
-  );
-};
-
-const PostJobView = ({ navigate }) => {
-  return (
-    <div className="bg-slate-50 min-h-screen py-12">
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Post a Job</h1>
-          <p className="text-slate-600">Find the best fit-out professionals for your next project.</p>
-        </div>
-
-        <form className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 space-y-8">
-          {/* Section 1 */}
-          <div>
-            <h3 className="text-xl font-semibold text-slate-900 border-b border-slate-100 pb-3 mb-5">Job Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1 md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Job Title *</label>
-                <input type="text" placeholder="e.g. Project Manager - Interiors" className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Department/Role Category *</label>
-                <select className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option>Select Department</option>
-                  {JOB_CATEGORIES.map(c => <option key={c.id}>{c.title}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Location *</label>
-                <input type="text" placeholder="e.g. Noida, Sector 62" className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Experience Required *</label>
-                <select className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option>Select Experience</option>
-                  {EXPERIENCE_LEVELS.map(e => <option key={e}>{e}</option>)}
-                </select>
-              </div>
-
-               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Job Type *</label>
-                <select className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option>Full-time</option>
-                  <option>Contract (Project Based)</option>
-                  <option>Part-time</option>
-                </select>
-              </div>
+        <div class="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-slate-800 text-sm text-slate-500 flex flex-col md:flex-row justify-between items-center">
+            <p>© <span id="current-year"></span> FitoutJobs. All rights reserved.</p>
+            <div class="flex space-x-4 mt-4 md:mt-0">
+                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer text-xs text-white">in</div>
+                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-400 transition-colors cursor-pointer text-xs text-white">tw</div>
+                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-800 transition-colors cursor-pointer text-xs text-white">fb</div>
             </div>
-          </div>
+        </div>
+    </footer>
 
-          {/* Section 2 */}
-          <div>
-             <h3 className="text-xl font-semibold text-slate-900 border-b border-slate-100 pb-3 mb-5">Job Description</h3>
-             <div className="space-y-6">
+    <!-- Application Script -->
+    <script>
+        // --- DUMMY DATA ---
+        const JOB_CATEGORIES = [
+            { id: 'pm', icon: 'hard-hat', title: 'Project Management', desc: 'For project managers, site leads, execution heads, and operations professionals.', count: 145 },
+            { id: 'qs', icon: 'bar-chart-2', title: 'Quantity Surveying', desc: 'For QS professionals handling measurements, BOQ checking, and commercial tracking.', count: 82 },
+            { id: 'est', icon: 'calculator', title: 'Estimation & Tendering', desc: 'For estimation engineers preparing BOQs, costing, and bid submissions.', count: 56 },
+            { id: 'bill', icon: 'file-text', title: 'Billing & Contracts', desc: 'For billing engineers, contract executives, and RA bill preparation.', count: 94 },
+            { id: 'des', icon: 'pencil-ruler', title: 'Design Coordination', desc: 'For design coordinators, AutoCAD draftsmen, 3D visualizers, and shop drawing teams.', count: 112 },
+            { id: 'proc', icon: 'shopping-cart', title: 'Procurement', desc: 'For executives handling vendor development, material sourcing, and POs.', count: 68 },
+            { id: 'mep', icon: 'building-2', title: 'MEP Coordination', desc: 'For HVAC, electrical, plumbing, firefighting, and services coordination roles.', count: 75 },
+            { id: 'qa', icon: 'shield-check', title: 'QA/QC & HSE', desc: 'For quality engineers, safety officers, site safety, and handover quality control.', count: 43 },
+            { id: 'bd', icon: 'trending-up', title: 'Business Development', desc: 'For sales, client acquisition, lead generation, and new project enquiries.', count: 51 },
+            { id: 'acc', icon: 'wallet', title: 'Accounts & Finance', desc: 'For project accounts, vendor payments, GST/TDS, and client invoicing.', count: 39 },
+            { id: 'run', icon: 'truck', title: 'Runner / Office Support', desc: 'For document collection, material sample movement, and site-to-office coordination.', count: 28 },
+            { id: 'store', icon: 'package', title: 'Store & Inventory', desc: 'For site store management, material inward/outward records, and stock registers.', count: 61 },
+        ];
+
+        const JOBS = [
+            {
+                id: 1, title: 'Project Manager – Corporate Interior Fit-Out', company: 'UrbanEdge Interiors', location: 'Noida',
+                experience: '8-12 Years', salary: '₹12L - ₹18L PA', type: 'Full-time', dept: 'Project Management',
+                skills: ['Fit-Out Execution', 'MS Project', 'Client Coordination', 'Handover'],
+                posted: '2 days ago',
+                description: 'We are looking for an experienced Project Manager to lead high-end corporate office fit-out projects. The ideal candidate will have a strong background in commercial interiors, managing multiple sites, and ensuring timely delivery within budget.',
+                responsibilities: ['End-to-end project execution', 'Client and architect coordination', 'Monitoring site progress and quality', 'Managing contractors and vendors', 'Ensuring HSE compliance at site']
+            },
+            {
+                id: 2, title: 'QS & Billing Engineer', company: 'Workspace Buildcon', location: 'Gurugram',
+                experience: '4-7 Years', salary: '₹5L - ₹8L PA', type: 'Full-time', dept: 'QS & Billing',
+                skills: ['BOQ', 'RA Bills', 'Rate Analysis', 'Excel'],
+                posted: '1 day ago',
+                description: 'Seeking a detail-oriented QS & Billing Engineer for commercial interior projects. You will be responsible for quantity take-offs, checking contractor bills, and preparing client RA bills.',
+                responsibilities: ['Preparation of Client RA Bills', 'Checking and certifying vendor bills', 'Quantity measurement from AutoCAD drawings', 'Reconciliation of materials']
+            },
+            {
+                id: 3, title: 'Design Coordinator – Fit-Out Projects', company: 'DesignAxis Studio', location: 'Bengaluru',
+                experience: '3-6 Years', salary: '₹6L - ₹9L PA', type: 'Full-time', dept: 'Design Coordination',
+                skills: ['AutoCAD', 'Shop Drawings', 'Architect Coordination', '3D Visualizer'],
+                posted: '3 days ago',
+                description: 'Join our design-build team as a Design Coordinator. You will act as the bridge between the design team and site execution team, ensuring all GFC drawings are accurate and constructible.',
+                responsibilities: ['Coordinating with architects and MEP consultants', 'Releasing GFC drawings to site', 'Resolving site design queries', 'Preparing as-built drawings']
+            },
+            {
+                id: 4, title: 'Procurement Manager – Interior Materials', company: 'Apex Fit-Out Solutions', location: 'Mumbai',
+                experience: '6-10 Years', salary: '₹9L - ₹14L PA', type: 'Full-time', dept: 'Procurement',
+                skills: ['Vendor Management', 'Material Sourcing', 'Work Orders', 'Contracts'],
+                posted: '5 hours ago',
+                description: 'We need a strategic Procurement Manager to handle sourcing of interior finishing materials, furniture, and MEP equipment for large-scale corporate projects.',
+                responsibilities: ['Vendor development and onboarding', 'Negotiating rates and commercial terms', 'Issuing POs and Work Orders', 'Ensuring timely delivery of materials to site']
+            },
+            {
+                id: 5, title: 'MEP Coordinator – Commercial Interiors', company: 'Metroline Projects', location: 'Delhi',
+                experience: '5-8 Years', salary: '₹7L - ₹11L PA', type: 'Contract', dept: 'MEP Coordination',
+                skills: ['HVAC Coordination', 'Firefighting', 'Electrical', 'Plumbing'],
+                posted: '1 week ago',
+                description: 'Looking for an MEP Coordinator with strong experience in corporate interior fit-outs. You will ensure all services are clash-free and executed as per design.',
+                responsibilities: ['Reviewing MEP drawings', 'Coordinating between interior and MEP teams', 'Site supervision of MEP works', 'Testing and commissioning assistance']
+            },
+            {
+                id: 6, title: 'Business Development Manager', company: 'Corporate Space Makers', location: 'Pune',
+                experience: '7-12 Years', salary: '₹10L - ₹15L PA + Incentives', type: 'Full-time', dept: 'Business Development',
+                skills: ['Lead Generation', 'Corporate Sales', 'Tender Follow-Up', 'CRM'],
+                posted: '2 days ago',
+                description: 'Drive growth for our fit-out business. We are looking for a BDM with a strong network among architects, PMCs, and corporate real estate heads.',
+                responsibilities: ['Generating new project leads', 'Pitching to corporate clients', 'Follow-up on submitted tenders', 'Achieving sales targets']
+            },
+            {
+                id: 7, title: 'Site Store Incharge', company: 'BuildRight Interiors', location: 'Hyderabad',
+                experience: '2-5 Years', salary: '₹3L - ₹4.5L PA', type: 'Full-time', dept: 'Store & Inventory',
+                skills: ['Site Store', 'Material Inward', 'GRN', 'Stock Register'],
+                posted: '4 days ago',
+                description: 'Manage material inventory at a large corporate fit-out site. Responsible for safe storage, issuance, and record-keeping.',
+                responsibilities: ['Maintaining stock register', 'Preparing GRN', 'Issuing materials to contractors', 'Daily stock reconciliation']
+            },
+            {
+                id: 8, title: 'QA/QC Engineer – Interior Projects', company: 'Prime PMC Services', location: 'Chennai',
+                experience: '4-8 Years', salary: '₹6L - ₹9L PA', type: 'Full-time', dept: 'QA/QC & HSE',
+                skills: ['Snagging', 'Handover', 'Quality Checklists', 'Material Inspection'],
+                posted: 'Just now',
+                description: 'Ensure the highest quality standards are maintained on our premium interior projects. Prepare and execute quality plans.',
+                responsibilities: ['Conducting site inspections', 'Preparing snag lists', 'Checking incoming materials', 'Maintaining QA/QC documentation']
+            }
+        ];
+
+        const COMPANIES = [
+            { name: 'UrbanEdge Interiors', type: 'Design & Build Firm', jobs: 12, logo: 'UI' },
+            { name: 'Workspace Buildcon', type: 'Fit-Out Contractor', jobs: 8, logo: 'WB' },
+            { name: 'Apex Fit-Out Solutions', type: 'Fit-Out Contractor', jobs: 15, logo: 'AF' },
+            { name: 'Metroline Projects', type: 'PMC', jobs: 5, logo: 'MP' },
+            { name: 'DesignAxis Studio', type: 'Architecture Firm', jobs: 7, logo: 'DA' },
+            { name: 'Corporate Space Makers', type: 'Design & Build Firm', jobs: 10, logo: 'CS' },
+        ];
+
+        const LOCATIONS = ['Noida', 'Gurugram', 'Delhi', 'Mumbai', 'Bengaluru', 'Hyderabad', 'Pune', 'Chennai'];
+        const EXPERIENCE_LEVELS = ['0-2 Years', '2-5 Years', '5-8 Years', '8-12 Years', '12+ Years'];
+
+        // --- APP STATE ---
+        let currentPage = 'home';
+        let selectedJob = null;
+        let userRole = null; // 'candidate', 'employer', or null
+        let isMobileMenuOpen = false;
+        let isLoginMode = true; // For login/register toggle
+
+        // --- NAVIGATION & ACTIONS ---
+        function navigate(page) {
+            currentPage = page;
+            selectedJob = null;
+            isMobileMenuOpen = false;
+            window.scrollTo(0, 0);
+            render();
+        }
+
+        function handleJobSelect(jobId) {
+            selectedJob = JOBS.find(j => j.id === jobId);
+            currentPage = 'job-detail';
+            window.scrollTo(0, 0);
+            render();
+        }
+
+        function toggleMobileMenu() {
+            isMobileMenuOpen = !isMobileMenuOpen;
+            renderHeader(); // Only update header
+        }
+
+        function handleLogin(role) {
+            userRole = role;
+            if (role === 'employer') navigate('employer-dashboard');
+            else navigate('candidate-dashboard');
+        }
+
+        function handleLogout() {
+            userRole = null;
+            navigate('home');
+        }
+
+        function toggleLoginMode() {
+            isLoginMode = !isLoginMode;
+            render();
+        }
+
+        // --- UI COMPONENTS ---
+        function getButtonClass(variant = 'primary') {
+            const baseStyle = "inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer";
+            const variants = {
+                primary: "bg-blue-800 text-white hover:bg-blue-900 focus:ring-blue-800",
+                secondary: "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-600",
+                outline: "border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-blue-800",
+                ghost: "text-slate-600 hover:text-blue-800 hover:bg-blue-50 focus:ring-blue-800"
+            };
+            return `${baseStyle} ${variants[variant]}`;
+        }
+
+        function generateJobCardHTML(job) {
+            const visibleSkills = job.skills.slice(0, 3);
+            const extraSkillsCount = job.skills.length > 3 ? job.skills.length - 3 : 0;
+            
+            return `
+            <div class="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-lg transition-shadow cursor-pointer flex flex-col justify-between h-full group" onclick="handleJobSelect(${job.id})">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description *</label>
-                  <textarea rows="5" placeholder="Describe the role and responsibilities..." className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Key Skills (Comma separated)</label>
-                  <input type="text" placeholder="e.g. AutoCAD, BOQ, Billing, MS Project" className="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-             </div>
-          </div>
-
-          <div className="pt-4 flex justify-end gap-4">
-             <Button variant="ghost" onClick={(e) => { e.preventDefault(); navigate('home'); }}>Cancel</Button>
-             <Button onClick={(e) => { e.preventDefault(); alert("Job Posted Successfully!"); navigate('employer-dashboard'); }}>Post Job</Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-const LoginView = ({ navigate, loginAs }) => {
-  const [isLogin, setIsLogin] = useState(true);
-
-  return (
-    <div className="bg-slate-50 min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-          {isLogin ? 'Sign in to your account' : 'Create an account'}
-        </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-           Or <button onClick={() => setIsLogin(!isLogin)} className="font-medium text-blue-800 hover:text-blue-700">{isLogin ? 'register a new account' : 'sign in to existing account'}</button>
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-200">
-          <form className="space-y-6" action="#" method="POST">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Full Name</label>
-                <div className="mt-1">
-                  <input type="text" required className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                </div>
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Email address</label>
-              <div className="mt-1">
-                <input id="email" name="email" type="email" required className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Password</label>
-              <div className="mt-1">
-                <input id="password" name="password" type="password" required className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-              </div>
-            </div>
-
-            {isLogin && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded" />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-900">Remember me</label>
-                </div>
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-800 hover:text-blue-700">Forgot your password?</a>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <Button 
-                type="button" 
-                className="w-full py-3" 
-                onClick={() => loginAs('candidate')}
-              >
-                {isLogin ? 'Sign in as Candidate' : 'Register as Candidate'}
-              </Button>
-               <Button 
-                type="button" 
-                variant="outline"
-                className="w-full py-3 mt-3" 
-                onClick={() => loginAs('employer')}
-              >
-                {isLogin ? 'Sign in as Employer' : 'Register as Employer'}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CandidateDashboardView = () => {
-  return (
-    <div className="bg-slate-50 min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-slate-900 mb-8">My Profile Dashboard</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Sidebar */}
-          <div className="md:col-span-1 space-y-6">
-            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm text-center">
-               <div className="w-24 h-24 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-blue-800">
-                  JD
-               </div>
-               <h2 className="text-xl font-bold text-slate-900">John Doe</h2>
-               <p className="text-slate-600 mb-4">Senior Project Manager</p>
-               <div className="flex justify-center gap-2 text-sm text-slate-500 mb-6">
-                 <span className="flex items-center"><MapPin className="w-4 h-4 mr-1"/> Noida</span>
-                 <span className="flex items-center"><Briefcase className="w-4 h-4 mr-1"/> 8 Yrs</span>
-               </div>
-               
-               <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2">
-                  <div className="bg-emerald-500 h-2.5 rounded-full" style={{ width: '85%' }}></div>
-               </div>
-               <p className="text-xs text-slate-500 mb-4">Profile 85% complete</p>
-
-               <Button variant="outline" className="w-full"><Upload className="w-4 h-4 mr-2"/> Update Resume</Button>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-slate-900 mb-4">Top Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                  {['Fit-Out Execution', 'MS Project', 'Client Handling', 'BOQ', 'Vendor Mgmt'].map((skill, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-sm">
-                      {skill}
-                    </span>
-                  ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
-                <div className="text-2xl font-bold text-blue-800 mb-1">12</div>
-                <div className="text-sm text-slate-500">Applied Jobs</div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
-                <div className="text-2xl font-bold text-emerald-600 mb-1">3</div>
-                <div className="text-sm text-slate-500">Shortlisted</div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
-                <div className="text-2xl font-bold text-slate-700 mb-1">8</div>
-                <div className="text-sm text-slate-500">Saved Jobs</div>
-              </div>
-            </div>
-
-            {/* Recent Applications */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-               <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-900">Recent Applications</h3>
-               </div>
-               <div className="divide-y divide-slate-100">
-                  {[1, 2, 3].map((item) => (
-                    <div key={item} className="p-4 flex justify-between items-center hover:bg-slate-50">
-                      <div>
-                        <h4 className="font-semibold text-slate-900">Project Manager - Commercial</h4>
-                        <p className="text-sm text-slate-500">UrbanEdge Interiors • Applied 2 days ago</p>
-                      </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                        In Review
-                      </span>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-900 group-hover:text-blue-800 transition-colors line-clamp-1">${job.title}</h3>
+                            <p class="text-sm text-slate-600 mt-1">${job.company}</p>
+                        </div>
+                        <button class="text-slate-400 hover:text-blue-600 transition-colors" onclick="event.stopPropagation(); alert('Job saved!')">
+                            <i data-lucide="bookmark" class="w-5 h-5"></i>
+                        </button>
                     </div>
-                  ))}
-               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EmployerDashboardView = ({ navigate }) => {
-   return (
-    <div className="bg-slate-50 min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">Employer Dashboard</h1>
-          <Button onClick={() => navigate('post-job')}>Post New Job</Button>
-        </div>
-        
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
-             <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-800 mr-4">
-               <Briefcase className="w-6 h-6"/>
-             </div>
-             <div>
-               <div className="text-2xl font-bold text-slate-900">5</div>
-               <div className="text-sm text-slate-500">Active Jobs</div>
-             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
-             <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-800 mr-4">
-               <Users className="w-6 h-6"/>
-             </div>
-             <div>
-               <div className="text-2xl font-bold text-slate-900">142</div>
-               <div className="text-sm text-slate-500">Total Applicants</div>
-             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
-             <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-800 mr-4">
-               <Star className="w-6 h-6"/>
-             </div>
-             <div>
-               <div className="text-2xl font-bold text-slate-900">18</div>
-               <div className="text-sm text-slate-500">Shortlisted</div>
-             </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
-             <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 mr-4">
-               <FileBarChart className="w-6 h-6"/>
-             </div>
-             <div>
-               <div className="text-2xl font-bold text-slate-900">2</div>
-               <div className="text-sm text-slate-500">Expired Jobs</div>
-             </div>
-          </div>
-        </div>
-
-        {/* Manage Jobs */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h3 className="font-bold text-slate-900 text-lg">Manage Jobs</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="py-3 px-6 text-sm font-semibold text-slate-600">Job Title</th>
-                  <th className="py-3 px-6 text-sm font-semibold text-slate-600">Status</th>
-                  <th className="py-3 px-6 text-sm font-semibold text-slate-600">Posted</th>
-                  <th className="py-3 px-6 text-sm font-semibold text-slate-600">Applicants</th>
-                  <th className="py-3 px-6 text-sm font-semibold text-slate-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                <tr className="hover:bg-slate-50">
-                  <td className="py-4 px-6 text-sm font-medium text-slate-900">Project Manager – Corporate Interior Fit-Out</td>
-                  <td className="py-4 px-6"><span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Active</span></td>
-                  <td className="py-4 px-6 text-sm text-slate-500">Oct 24, 2023</td>
-                  <td className="py-4 px-6 text-sm font-medium text-blue-800 cursor-pointer hover:underline">45 View</td>
-                  <td className="py-4 px-6 text-sm text-slate-500">
-                    <button className="hover:text-blue-800 mr-3">Edit</button>
-                    <button className="hover:text-red-600">Close</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50">
-                  <td className="py-4 px-6 text-sm font-medium text-slate-900">QS & Billing Engineer</td>
-                  <td className="py-4 px-6"><span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Active</span></td>
-                  <td className="py-4 px-6 text-sm text-slate-500">Oct 22, 2023</td>
-                  <td className="py-4 px-6 text-sm font-medium text-blue-800 cursor-pointer hover:underline">82 View</td>
-                  <td className="py-4 px-6 text-sm text-slate-500">
-                    <button className="hover:text-blue-800 mr-3">Edit</button>
-                    <button className="hover:text-red-600">Close</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50 opacity-60">
-                  <td className="py-4 px-6 text-sm font-medium text-slate-900">Site Supervisor</td>
-                  <td className="py-4 px-6"><span className="px-2 py-1 bg-slate-200 text-slate-600 rounded-full text-xs font-medium">Expired</span></td>
-                  <td className="py-4 px-6 text-sm text-slate-500">Sep 10, 2023</td>
-                  <td className="py-4 px-6 text-sm font-medium text-slate-600">120</td>
-                  <td className="py-4 px-6 text-sm text-slate-500">
-                    <button className="hover:text-blue-800 mr-3">Repost</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// --- MAIN APP COMPONENT ---
-
-export default function App() {
-  const [currentPage, setCurrentPage] = useState('home');
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [userRole, setUserRole] = useState(null); // 'candidate', 'employer', or null
-
-  // Scroll to top on navigation
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [currentPage, selectedJob]);
-
-  const navigate = (page) => {
-    setCurrentPage(page);
-    setSelectedJob(null);
-    setIsMobileMenuOpen(false);
-  };
-
-  const handleJobSelect = (job) => {
-    setSelectedJob(job);
-    setCurrentPage('job-detail');
-  };
-
-  const handleLogin = (role) => {
-    setUserRole(role);
-    if (role === 'employer') navigate('employer-dashboard');
-    else navigate('candidate-dashboard');
-  };
-
-  const handleLogout = () => {
-    setUserRole(null);
-    navigate('home');
-  };
-
-  const renderPage = () => {
-    if (selectedJob && currentPage === 'job-detail') {
-      return <JobDetailView job={selectedJob} goBack={() => navigate('jobs')} />;
-    }
-
-    switch (currentPage) {
-      case 'home': return <HomeView navigate={navigate} />;
-      case 'jobs': return <JobsView setJobDetail={handleJobSelect} />;
-      case 'post-job': return <PostJobView navigate={navigate} />;
-      case 'login': return <LoginView navigate={navigate} loginAs={handleLogin} />;
-      case 'candidate-dashboard': return <CandidateDashboardView />;
-      case 'employer-dashboard': return <EmployerDashboardView navigate={navigate} />;
-      default: return <HomeView navigate={navigate} />;
-    }
-  };
-
-  return (
-    <div className="font-sans text-slate-900 bg-white min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
-            
-            {/* Logo */}
-            <div className="flex items-center cursor-pointer" onClick={() => navigate('home')}>
-              <div className="w-8 h-8 bg-blue-800 rounded-md flex items-center justify-center mr-2">
-                <Building2 className="text-white w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-slate-900">
-                Fitout<span className="text-blue-800">Jobs</span>
-              </span>
-            </div>
-
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <button onClick={() => navigate('jobs')} className={`text-sm font-medium hover:text-blue-800 ${currentPage === 'jobs' ? 'text-blue-800' : 'text-slate-600'}`}>Find Jobs</button>
-              <button className="text-sm font-medium text-slate-600 hover:text-blue-800">Companies</button>
-              <button className="text-sm font-medium text-slate-600 hover:text-blue-800">Career Advice</button>
-              
-              <div className="h-6 w-px bg-slate-200"></div>
-
-              {userRole ? (
-                <div className="flex items-center space-x-4">
-                  <button 
-                    onClick={() => navigate(userRole === 'employer' ? 'employer-dashboard' : 'candidate-dashboard')} 
-                    className="text-sm font-medium text-slate-900 hover:text-blue-800 flex items-center"
-                  >
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center mr-2 border border-slate-200">
-                      <UserIcon role={userRole} />
+                    
+                    <div class="flex flex-wrap gap-y-2 gap-x-4 mb-4 text-sm text-slate-600">
+                        <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4"></i> ${job.location}</span>
+                        <span class="flex items-center gap-1"><i data-lucide="briefcase" class="w-4 h-4"></i> ${job.experience}</span>
+                        <span class="flex items-center gap-1"><i data-lucide="wallet" class="w-4 h-4"></i> ${job.salary}</span>
                     </div>
-                    Dashboard
-                  </button>
-                  <button onClick={handleLogout} className="text-sm font-medium text-slate-500 hover:text-slate-800">Logout</button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <button onClick={() => navigate('login')} className="text-sm font-medium text-slate-600 hover:text-blue-800">Login / Register</button>
-                  <Button onClick={() => navigate('post-job')}>Post a Job</Button>
-                </div>
-              )}
-            </nav>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-600 hover:text-slate-900">
-                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
-            </div>
-          </div>
-        </div>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        ${visibleSkills.map(skill => `<span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">${skill}</span>`).join('')}
+                        ${extraSkillsCount > 0 ? `<span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">+${extraSkillsCount}</span>` : ''}
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
+                    <span class="text-xs text-slate-500">${job.posted}</span>
+                    <span class="text-sm font-medium text-blue-800 group-hover:underline">View Details</span>
+                </div>
+            </div>`;
+        }
 
-        {/* Mobile Nav */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-1 shadow-lg absolute w-full">
-            <button onClick={() => navigate('jobs')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Find Jobs</button>
-            <button className="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Companies</button>
-            <button className="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Career Advice</button>
+        // --- VIEWS ---
+        function getHomeViewHTML() {
+            return `
+            <div class="flex flex-col min-h-screen">
+                <!-- Hero Section -->
+                <section class="bg-slate-900 text-white py-20 relative overflow-hidden">
+                    <div class="absolute inset-0 opacity-10">
+                        <svg class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                                    <path d="M0 40L40 0H20L0 20M40 40V20L20 40" fill="none" stroke="currentColor" stroke-width="1" />
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+                        </svg>
+                    </div>
+
+                    <div class="max-w-7xl mx-auto px-4 relative z-10">
+                        <div class="max-w-3xl">
+                            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+                                Find Jobs in <span class="text-blue-400">Corporate Interior Fit-Out</span>
+                            </h1>
+                            <p class="text-lg text-slate-300 mb-10 leading-relaxed">
+                                A dedicated platform for project, design, estimation, billing, procurement, business development, and site coordination roles in the interior contracting industry.
+                            </p>
+
+                            <!-- Search Box -->
+                            <div class="bg-white p-2 rounded-lg shadow-xl flex flex-col md:flex-row gap-2">
+                                <div class="flex-1 flex items-center px-4 bg-slate-50 rounded-md border border-slate-200">
+                                    <i data-lucide="search" class="w-5 h-5 text-slate-400 mr-2"></i>
+                                    <input type="text" placeholder="Job title, skills, or keywords" class="w-full bg-transparent border-none py-3 focus:outline-none text-slate-900 placeholder-slate-500"/>
+                                </div>
+                                <div class="flex-1 flex items-center px-4 bg-slate-50 rounded-md border border-slate-200">
+                                    <i data-lucide="map-pin" class="w-5 h-5 text-slate-400 mr-2"></i>
+                                    <select class="w-full bg-transparent border-none py-3 focus:outline-none text-slate-900">
+                                        <option value="">Any Location</option>
+                                        ${LOCATIONS.map(loc => `<option value="${loc}">${loc}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <button class="${getButtonClass('primary')} py-3 px-8 text-base" onclick="navigate('jobs')">Search Jobs</button>
+                            </div>
+                            
+                            <p class="mt-4 text-sm text-slate-400 flex items-center gap-2">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                                Trusted by leading contractors, PMCs, and design-build firms.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Categories Section -->
+                <section class="py-20 bg-slate-50">
+                    <div class="max-w-7xl mx-auto px-4">
+                        <div class="text-center mb-12">
+                            <h2 class="text-3xl font-bold text-slate-900 mb-4">Explore Fit-Out Roles</h2>
+                            <p class="text-slate-600 max-w-2xl mx-auto">Find specialized positions tailored to your expertise in commercial interiors.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            ${JOB_CATEGORIES.map(cat => `
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-lg transition-all group cursor-pointer" onclick="navigate('jobs')">
+                                <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-800 mb-4 group-hover:bg-blue-800 group-hover:text-white transition-colors">
+                                    <i data-lucide="${cat.icon}" class="w-6 h-6"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-slate-900 mb-2">${cat.title}</h3>
+                                <p class="text-sm text-slate-500 mb-4 line-clamp-2">${cat.desc}</p>
+                                <div class="flex items-center text-blue-800 text-sm font-medium">
+                                    ${cat.count} Open Jobs <i data-lucide="chevron-right" class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Featured Jobs -->
+                <section class="py-20 bg-white">
+                    <div class="max-w-7xl mx-auto px-4">
+                        <div class="flex justify-between items-end mb-10">
+                            <div>
+                                <h2 class="text-3xl font-bold text-slate-900 mb-2">Featured Jobs</h2>
+                                <p class="text-slate-600">Latest opportunities from top companies.</p>
+                            </div>
+                            <button class="${getButtonClass('outline')}" onclick="navigate('jobs')">View All Jobs</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${JOBS.slice(0, 8).map(job => generateJobCardHTML(job)).join('')}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- For Employers CTA -->
+                <section class="py-20 bg-blue-900 text-white">
+                    <div class="max-w-7xl mx-auto px-4 text-center">
+                        <h2 class="text-3xl font-bold mb-6">Hire Fit-Out Talent Faster</h2>
+                        <p class="text-xl text-blue-200 mb-10 max-w-3xl mx-auto">
+                            Post jobs and reach experienced professionals from the corporate interior, commercial fit-out, workplace design, and site execution industry. Stop sifting through irrelevant resumes.
+                        </p>
+                        <div class="flex flex-col sm:flex-row justify-center gap-4">
+                            <button class="${getButtonClass('secondary')} px-8 py-3 text-lg" onclick="navigate('post-job')">Post a Job Now</button>
+                            <button class="${getButtonClass('outline')} px-8 py-3 text-lg border-blue-400 text-blue-100 hover:bg-blue-800 hover:text-white bg-transparent" onclick="navigate('post-job')">View Pricing</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Companies -->
+                <section class="py-20 bg-slate-50">
+                    <div class="max-w-7xl mx-auto px-4">
+                        <h2 class="text-3xl font-bold text-slate-900 mb-10 text-center">Top Companies Hiring</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            ${COMPANIES.map(company => `
+                            <div class="bg-white border border-slate-200 p-6 rounded-lg text-center hover:shadow-md transition-shadow cursor-pointer">
+                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-xl font-bold text-slate-400 mx-auto mb-4">
+                                    ${company.logo}
+                                </div>
+                                <h4 class="font-semibold text-slate-900 text-sm mb-1 line-clamp-1">${company.name}</h4>
+                                <p class="text-xs text-slate-500">${company.type}</p>
+                                <div class="mt-4 text-xs font-medium text-blue-800">${company.jobs} Jobs</div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            </div>`;
+        }
+
+        function getJobsViewHTML() {
+            const depts = ['Project Management', 'QS & Billing', 'Estimation & Tendering', 'Design Coordination', 'Procurement', 'MEP Coordination', 'QA/QC & HSE'];
             
-            <div className="border-t border-slate-200 pt-4 mt-4">
-              {userRole ? (
-                 <>
-                  <button onClick={() => navigate(userRole === 'employer' ? 'employer-dashboard' : 'candidate-dashboard')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-900 hover:bg-slate-50 rounded-md">Dashboard</button>
-                  <button onClick={handleLogout} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-500 hover:bg-slate-50 rounded-md">Logout</button>
-                 </>
-              ) : (
-                <>
-                  <button onClick={() => navigate('login')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Login / Register</button>
-                  <Button className="w-full mt-2" onClick={() => navigate('post-job')}>Post a Job</Button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </header>
+            return `
+            <div class="bg-slate-50 min-h-screen py-8">
+                <div class="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-8">
+                    
+                    <!-- Sidebar Filters -->
+                    <div class="w-full lg:w-1/4">
+                        <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm sticky top-24">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-slate-900">Filters</h3>
+                                <button class="text-sm text-blue-800 hover:underline">Clear all</button>
+                            </div>
 
-      {/* Main Content Area */}
-      <main className="flex-grow">
-        {renderPage()}
-      </main>
+                            <div class="space-y-6">
+                                <!-- Filter Group -->
+                                <div>
+                                    <h4 class="font-semibold text-slate-800 mb-3 text-sm">Department</h4>
+                                    <div class="space-y-2">
+                                        ${depts.map(dept => `
+                                        <label class="flex items-center text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                            <input type="checkbox" class="rounded border-slate-300 text-blue-800 focus:ring-blue-800 mr-2" />
+                                            ${dept}
+                                        </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-1">
-            <div className="flex items-center mb-4 opacity-90">
-              <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center mr-2">
-                <Building2 className="text-white w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-white">
-                Fitout<span className="text-blue-400">Jobs</span>
-              </span>
-            </div>
-            <p className="text-sm text-slate-400 leading-relaxed mb-4">
-              The premium dedicated job platform connecting top talent with leading corporate interior contracting, PMC, and design-build firms.
-            </p>
-          </div>
-          
-          <div>
-            <h4 className="text-white font-semibold mb-4">For Candidates</h4>
-            <ul className="space-y-2 text-sm">
-              <li><button onClick={() => navigate('jobs')} className="hover:text-white transition-colors">Browse All Jobs</button></li>
-              <li><button className="hover:text-white transition-colors">Career Advice</button></li>
-              <li><button className="hover:text-white transition-colors">Salary Guide</button></li>
-              <li><button onClick={() => navigate('login')} className="hover:text-white transition-colors">Create Profile</button></li>
-            </ul>
-          </div>
+                                <!-- Filter Group -->
+                                <div>
+                                    <h4 class="font-semibold text-slate-800 mb-3 text-sm">Location</h4>
+                                    <div class="space-y-2">
+                                        ${LOCATIONS.slice(0, 5).map(loc => `
+                                        <label class="flex items-center text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                            <input type="checkbox" class="rounded border-slate-300 text-blue-800 focus:ring-blue-800 mr-2" />
+                                            ${loc}
+                                        </label>
+                                        `).join('')}
+                                        <button class="text-sm text-blue-800 mt-2 hover:underline">+ Show more</button>
+                                    </div>
+                                </div>
 
-          <div>
-            <h4 className="text-white font-semibold mb-4">For Employers</h4>
-            <ul className="space-y-2 text-sm">
-              <li><button onClick={() => navigate('post-job')} className="hover:text-white transition-colors">Post a Job</button></li>
-              <li><button className="hover:text-white transition-colors">Search Resumes</button></li>
-              <li><button className="hover:text-white transition-colors">Pricing</button></li>
-              <li><button onClick={() => navigate('login')} className="hover:text-white transition-colors">Employer Login</button></li>
-            </ul>
-          </div>
+                                <!-- Filter Group -->
+                                <div>
+                                    <h4 class="font-semibold text-slate-800 mb-3 text-sm">Experience</h4>
+                                    <div class="space-y-2">
+                                        ${EXPERIENCE_LEVELS.map(exp => `
+                                        <label class="flex items-center text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                            <input type="checkbox" class="rounded border-slate-300 text-blue-800 focus:ring-blue-800 mr-2" />
+                                            ${exp}
+                                        </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-          <div>
-            <h4 className="text-white font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm">
-              <li><button className="hover:text-white transition-colors">About Us</button></li>
-              <li><button className="hover:text-white transition-colors">Contact</button></li>
-              <li><button className="hover:text-white transition-colors">Privacy Policy</button></li>
-              <li><button className="hover:text-white transition-colors">Terms of Service</button></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-slate-800 text-sm text-slate-500 flex flex-col md:flex-row justify-between items-center">
-          <p>© {new Date().getFullYear()} FitoutJobs. All rights reserved.</p>
-          <div className="flex space-x-4 mt-4 md:mt-0">
-             {/* Social placeholders */}
-             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer text-xs">in</div>
-             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-400 transition-colors cursor-pointer text-xs">tw</div>
-             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-800 transition-colors cursor-pointer text-xs">fb</div>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+                    <!-- Main Content -->
+                    <div class="w-full lg:w-3/4">
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <p class="text-slate-600 font-medium">Showing <span class="text-slate-900">124</span> jobs in Interior Fit-Out</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-slate-500">Sort by:</span>
+                                <select class="border border-slate-300 rounded-md py-1 px-3 text-sm text-slate-700 focus:outline-none focus:border-blue-500">
+                                    <option>Latest</option>
+                                    <option>Most Relevant</option>
+                                    <option>Salary: High to Low</option>
+                                </select>
+                            </div>
+                        </div>
 
-// Helper icon
-const UserIcon = ({ role }) => {
-  if(role === 'employer') return <Building2 className="w-4 h-4 text-slate-600" />;
-  return <Users className="w-4 h-4 text-slate-600" />;
-}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${JOBS.map(job => generateJobCardHTML(job)).join('')}
+                        </div>
+
+                        <div class="mt-8 flex justify-center">
+                            <button class="${getButtonClass('outline')} px-8 py-2">Load More Jobs</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>`;
+        }
+
+        function getJobDetailViewHTML(job) {
+            if (!job) return `<div>Job not found</div>`;
+
+            return `
+            <div class="bg-slate-50 min-h-screen py-8">
+                <div class="max-w-4xl mx-auto px-4">
+                    
+                    <button onclick="navigate('jobs')" class="text-slate-500 hover:text-blue-800 flex items-center text-sm mb-6 font-medium transition-colors">
+                        <i data-lucide="chevron-left" class="w-4 h-4 mr-1"></i> Back to Jobs
+                    </button>
+
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <!-- Header -->
+                        <div class="p-8 border-b border-slate-100">
+                            <div class="flex justify-between items-start mb-6">
+                                <div>
+                                    <h1 class="text-3xl font-bold text-slate-900 mb-2">${job.title}</h1>
+                                    <p class="text-lg text-blue-800 font-medium">${job.company}</p>
+                                </div>
+                                <div class="flex gap-3">
+                                    <button class="${getButtonClass('outline')} p-2"><i data-lucide="bookmark" class="w-5 h-5"></i></button>
+                                    <button class="${getButtonClass('primary')}">Apply Now</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                                <div>
+                                    <span class="text-slate-500 block mb-1">Location</span>
+                                    <span class="font-semibold text-slate-900 flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4"></i> ${job.location}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block mb-1">Experience</span>
+                                    <span class="font-semibold text-slate-900 flex items-center gap-1"><i data-lucide="briefcase" class="w-4 h-4"></i> ${job.experience}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block mb-1">Salary</span>
+                                    <span class="font-semibold text-slate-900 flex items-center gap-1"><i data-lucide="wallet" class="w-4 h-4"></i> ${job.salary}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block mb-1">Job Type</span>
+                                    <span class="font-semibold text-slate-900">${job.type}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="p-8 flex flex-col md:flex-row gap-10">
+                            <div class="w-full md:w-2/3 space-y-8">
+                                <section>
+                                    <h3 class="text-xl font-bold text-slate-900 mb-4">Job Description</h3>
+                                    <p class="text-slate-700 leading-relaxed">${job.description}</p>
+                                </section>
+
+                                <section>
+                                    <h3 class="text-xl font-bold text-slate-900 mb-4">Key Responsibilities</h3>
+                                    <ul class="space-y-3">
+                                        ${job.responsibilities.map(res => `
+                                        <li class="flex items-start">
+                                            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 mr-3 shrink-0 mt-0.5"></i>
+                                            <span class="text-slate-700">${res}</span>
+                                        </li>
+                                        `).join('')}
+                                    </ul>
+                                </section>
+
+                                <section>
+                                    <h3 class="text-xl font-bold text-slate-900 mb-4">Required Skills</h3>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${job.skills.map(skill => `
+                                        <span class="px-3 py-1.5 bg-blue-50 text-blue-800 rounded-md font-medium text-sm border border-blue-100">
+                                            ${skill}
+                                        </span>
+                                        `).join('')}
+                                    </div>
+                                </section>
+                            </div>
+
+                            <!-- Right Sidebar -->
+                            <div class="w-full md:w-1/3">
+                                <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                                    <h4 class="font-bold text-slate-900 mb-4">About the Company</h4>
+                                    <div class="w-16 h-16 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-xl font-bold text-slate-400 mb-4">
+                                        ${job.company.substring(0,2).toUpperCase()}
+                                    </div>
+                                    <h5 class="font-semibold text-slate-900 mb-2">${job.company}</h5>
+                                    <p class="text-sm text-slate-600 mb-4">A leading firm in the corporate interior fit-out space, specializing in executing premium workspaces.</p>
+                                    <button class="${getButtonClass('outline')} w-full">View Company Profile</button>
+                                </div>
+
+                                <div class="mt-6 bg-blue-50 p-6 rounded-lg border border-blue-100 text-center">
+                                    <i data-lucide="monitor" class="w-8 h-8 text-blue-800 mx-auto mb-3"></i>
+                                    <h4 class="font-bold text-blue-900 mb-2">Want to apply faster?</h4>
+                                    <p class="text-sm text-blue-800 mb-4">Upload your resume to pre-fill applications for interior fit-out roles.</p>
+                                    <button class="${getButtonClass('primary')} w-full">Upload Resume</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getPostJobViewHTML() {
+            return `
+            <div class="bg-slate-50 min-h-screen py-12">
+                <div class="max-w-3xl mx-auto px-4">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-slate-900 mb-2">Post a Job</h1>
+                        <p class="text-slate-600">Find the best fit-out professionals for your next project.</p>
+                    </div>
+
+                    <form class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 space-y-8" onsubmit="event.preventDefault(); alert('Job Posted Successfully!'); navigate('employer-dashboard');">
+                        <!-- Section 1 -->
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-900 border-b border-slate-100 pb-3 mb-5">Job Details</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="col-span-1 md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Job Title *</label>
+                                    <input type="text" required placeholder="e.g. Project Manager - Interiors" class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Department/Role Category *</label>
+                                    <select required class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="">Select Department</option>
+                                        ${JOB_CATEGORIES.map(c => `<option>${c.title}</option>`).join('')}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Location *</label>
+                                    <input type="text" required placeholder="e.g. Noida, Sector 62" class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Experience Required *</label>
+                                    <select required class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="">Select Experience</option>
+                                        ${EXPERIENCE_LEVELS.map(e => `<option>${e}</option>`).join('')}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Job Type *</label>
+                                    <select required class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option>Full-time</option>
+                                        <option>Contract (Project Based)</option>
+                                        <option>Part-time</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2 -->
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-900 border-b border-slate-100 pb-3 mb-5">Job Description</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Description *</label>
+                                    <textarea rows="5" required placeholder="Describe the role and responsibilities..." class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Key Skills (Comma separated)</label>
+                                    <input type="text" placeholder="e.g. AutoCAD, BOQ, Billing, MS Project" class="w-full border border-slate-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-end gap-4">
+                            <button type="button" class="${getButtonClass('ghost')}" onclick="navigate('home')">Cancel</button>
+                            <button type="submit" class="${getButtonClass('primary')}">Post Job</button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+        }
+
+        function getLoginViewHTML() {
+            return `
+            <div class="bg-slate-50 min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+                <div class="sm:mx-auto sm:w-full sm:max-w-md">
+                    <h2 class="mt-6 text-center text-3xl font-extrabold text-slate-900">
+                        ${isLoginMode ? 'Sign in to your account' : 'Create an account'}
+                    </h2>
+                    <p class="mt-2 text-center text-sm text-slate-600">
+                        Or <button onclick="toggleLoginMode()" class="font-medium text-blue-800 hover:text-blue-700">${isLoginMode ? 'register a new account' : 'sign in to existing account'}</button>
+                    </p>
+                </div>
+
+                <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-200">
+                        <form class="space-y-6" onsubmit="event.preventDefault();">
+                            ${!isLoginMode ? `
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Full Name</label>
+                                <div class="mt-1">
+                                    <input type="text" required class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                </div>
+                            </div>` : ''}
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Email address</label>
+                                <div class="mt-1">
+                                    <input type="email" required class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Password</label>
+                                <div class="mt-1">
+                                    <input type="password" required class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                </div>
+                            </div>
+
+                            ${isLoginMode ? `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded" />
+                                    <label class="ml-2 block text-sm text-slate-900">Remember me</label>
+                                </div>
+                                <div class="text-sm">
+                                    <a href="#" class="font-medium text-blue-800 hover:text-blue-700">Forgot your password?</a>
+                                </div>
+                            </div>` : ''}
+
+                            <div>
+                                <button type="button" class="${getButtonClass('primary')} w-full py-3" onclick="handleLogin('candidate')">
+                                    ${isLoginMode ? 'Sign in as Candidate' : 'Register as Candidate'}
+                                </button>
+                                <button type="button" class="${getButtonClass('outline')} w-full py-3 mt-3" onclick="handleLogin('employer')">
+                                    ${isLoginMode ? 'Sign in as Employer' : 'Register as Employer'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getCandidateDashboardViewHTML() {
+            const skills = ['Fit-Out Execution', 'MS Project', 'Client Handling', 'BOQ', 'Vendor Mgmt'];
+            
+            return `
+            <div class="bg-slate-50 min-h-screen py-8">
+                <div class="max-w-7xl mx-auto px-4">
+                    <h1 class="text-2xl font-bold text-slate-900 mb-8">My Profile Dashboard</h1>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- Sidebar -->
+                        <div class="md:col-span-1 space-y-6">
+                            <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm text-center">
+                                <div class="w-24 h-24 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-blue-800">
+                                    JD
+                                </div>
+                                <h2 class="text-xl font-bold text-slate-900">John Doe</h2>
+                                <p class="text-slate-600 mb-4">Senior Project Manager</p>
+                                <div class="flex justify-center gap-2 text-sm text-slate-500 mb-6">
+                                    <span class="flex items-center"><i data-lucide="map-pin" class="w-4 h-4 mr-1"></i> Noida</span>
+                                    <span class="flex items-center"><i data-lucide="briefcase" class="w-4 h-4 mr-1"></i> 8 Yrs</span>
+                                </div>
+                                
+                                <div class="w-full bg-slate-100 rounded-full h-2.5 mb-2">
+                                    <div class="bg-emerald-500 h-2.5 rounded-full" style="width: 85%"></div>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-4">Profile 85% complete</p>
+
+                                <button class="${getButtonClass('outline')} w-full"><i data-lucide="upload" class="w-4 h-4 mr-2"></i> Update Resume</button>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                                <h3 class="font-bold text-slate-900 mb-4">Top Skills</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    ${skills.map(skill => `<span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-sm">${skill}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Content -->
+                        <div class="md:col-span-2 space-y-6">
+                            <!-- Stats -->
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
+                                    <div class="text-2xl font-bold text-blue-800 mb-1">12</div>
+                                    <div class="text-sm text-slate-500">Applied Jobs</div>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
+                                    <div class="text-2xl font-bold text-emerald-600 mb-1">3</div>
+                                    <div class="text-sm text-slate-500">Shortlisted</div>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
+                                    <div class="text-2xl font-bold text-slate-700 mb-1">8</div>
+                                    <div class="text-sm text-slate-500">Saved Jobs</div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Applications -->
+                            <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                                <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+                                    <h3 class="font-bold text-slate-900">Recent Applications</h3>
+                                </div>
+                                <div class="divide-y divide-slate-100">
+                                    ${[1, 2, 3].map(() => `
+                                    <div class="p-4 flex justify-between items-center hover:bg-slate-50">
+                                        <div>
+                                            <h4 class="font-semibold text-slate-900">Project Manager - Commercial</h4>
+                                            <p class="text-sm text-slate-500">UrbanEdge Interiors • Applied 2 days ago</p>
+                                        </div>
+                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                            In Review
+                                        </span>
+                                    </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getEmployerDashboardViewHTML() {
+            return `
+            <div class="bg-slate-50 min-h-screen py-8">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-2xl font-bold text-slate-900">Employer Dashboard</h1>
+                        <button class="${getButtonClass('primary')}" onclick="navigate('post-job')">Post New Job</button>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
+                            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-800 mr-4">
+                                <i data-lucide="briefcase" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-slate-900">5</div>
+                                <div class="text-sm text-slate-500">Active Jobs</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
+                            <div class="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-800 mr-4">
+                                <i data-lucide="users" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-slate-900">142</div>
+                                <div class="text-sm text-slate-500">Total Applicants</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
+                            <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-800 mr-4">
+                                <i data-lucide="star" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-slate-900">18</div>
+                                <div class="text-sm text-slate-500">Shortlisted</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex items-center">
+                            <div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 mr-4">
+                                <i data-lucide="file-bar-chart" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-slate-900">2</div>
+                                <div class="text-sm text-slate-500">Expired Jobs</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manage Jobs -->
+                    <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-slate-200">
+                            <h3 class="font-bold text-slate-900 text-lg">Manage Jobs</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200">
+                                        <th class="py-3 px-6 text-sm font-semibold text-slate-600">Job Title</th>
+                                        <th class="py-3 px-6 text-sm font-semibold text-slate-600">Status</th>
+                                        <th class="py-3 px-6 text-sm font-semibold text-slate-600">Posted</th>
+                                        <th class="py-3 px-6 text-sm font-semibold text-slate-600">Applicants</th>
+                                        <th class="py-3 px-6 text-sm font-semibold text-slate-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="py-4 px-6 text-sm font-medium text-slate-900">Project Manager – Corporate Interior Fit-Out</td>
+                                        <td class="py-4 px-6"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Active</span></td>
+                                        <td class="py-4 px-6 text-sm text-slate-500">Oct 24, 2023</td>
+                                        <td class="py-4 px-6 text-sm font-medium text-blue-800 cursor-pointer hover:underline">45 View</td>
+                                        <td class="py-4 px-6 text-sm text-slate-500">
+                                            <button class="hover:text-blue-800 mr-3">Edit</button>
+                                            <button class="hover:text-red-600">Close</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="py-4 px-6 text-sm font-medium text-slate-900">QS & Billing Engineer</td>
+                                        <td class="py-4 px-6"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">Active</span></td>
+                                        <td class="py-4 px-6 text-sm text-slate-500">Oct 22, 2023</td>
+                                        <td class="py-4 px-6 text-sm font-medium text-blue-800 cursor-pointer hover:underline">82 View</td>
+                                        <td class="py-4 px-6 text-sm text-slate-500">
+                                            <button class="hover:text-blue-800 mr-3">Edit</button>
+                                            <button class="hover:text-red-600">Close</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50 opacity-60">
+                                        <td class="py-4 px-6 text-sm font-medium text-slate-900">Site Supervisor</td>
+                                        <td class="py-4 px-6"><span class="px-2 py-1 bg-slate-200 text-slate-600 rounded-full text-xs font-medium">Expired</span></td>
+                                        <td class="py-4 px-6 text-sm text-slate-500">Sep 10, 2023</td>
+                                        <td class="py-4 px-6 text-sm font-medium text-slate-600">120</td>
+                                        <td class="py-4 px-6 text-sm text-slate-500">
+                                            <button class="hover:text-blue-800 mr-3">Repost</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+
+        // --- RENDERING PIPELINE ---
+        function renderHeader() {
+            const desktopNav = document.getElementById('desktop-nav');
+            const mobileNav = document.getElementById('mobile-nav');
+            const mobileBtn = document.getElementById('mobile-menu-btn');
+
+            // Desktop Links setup
+            let desktopLinksHTML = `
+                <button onclick="navigate('jobs')" class="text-sm font-medium hover:text-blue-800 ${currentPage === 'jobs' ? 'text-blue-800' : 'text-slate-600'}">Find Jobs</button>
+                <button class="text-sm font-medium text-slate-600 hover:text-blue-800">Companies</button>
+                <button class="text-sm font-medium text-slate-600 hover:text-blue-800">Career Advice</button>
+                <div class="h-6 w-px bg-slate-200"></div>
+            `;
+
+            if (userRole) {
+                const dashRoute = userRole === 'employer' ? 'employer-dashboard' : 'candidate-dashboard';
+                const dashIcon = userRole === 'employer' ? 'building-2' : 'users';
+                desktopLinksHTML += `
+                    <div class="flex items-center space-x-4">
+                        <button onclick="navigate('${dashRoute}')" class="text-sm font-medium text-slate-900 hover:text-blue-800 flex items-center">
+                            <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center mr-2 border border-slate-200">
+                                <i data-lucide="${dashIcon}" class="w-4 h-4 text-slate-600"></i>
+                            </div>
+                            Dashboard
+                        </button>
+                        <button onclick="handleLogout()" class="text-sm font-medium text-slate-500 hover:text-slate-800">Logout</button>
+                    </div>
+                `;
+            } else {
+                desktopLinksHTML += `
+                    <div class="flex items-center space-x-4">
+                        <button onclick="navigate('login')" class="text-sm font-medium text-slate-600 hover:text-blue-800">Login / Register</button>
+                        <button class="${getButtonClass('primary')}" onclick="navigate('post-job')">Post a Job</button>
+                    </div>
+                `;
+            }
+            desktopNav.innerHTML = desktopLinksHTML;
+
+            // Mobile menu logic
+            if (isMobileMenuOpen) {
+                mobileNav.classList.remove('hidden');
+                mobileBtn.innerHTML = '<i data-lucide="x" class="h-6 w-6"></i>';
+                
+                let mobileLinksHTML = `
+                    <button onclick="navigate('jobs')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Find Jobs</button>
+                    <button class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Companies</button>
+                    <button class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Career Advice</button>
+                    <div class="border-t border-slate-200 pt-4 mt-4">
+                `;
+
+                if (userRole) {
+                    const dashRoute = userRole === 'employer' ? 'employer-dashboard' : 'candidate-dashboard';
+                    mobileLinksHTML += `
+                        <button onclick="navigate('${dashRoute}')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-900 hover:bg-slate-50 rounded-md">Dashboard</button>
+                        <button onclick="handleLogout()" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-500 hover:bg-slate-50 rounded-md">Logout</button>
+                    `;
+                } else {
+                    mobileLinksHTML += `
+                        <button onclick="navigate('login')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-800 rounded-md">Login / Register</button>
+                        <button class="${getButtonClass('primary')} w-full mt-2" onclick="navigate('post-job')">Post a Job</button>
+                    `;
+                }
+                mobileLinksHTML += `</div>`;
+                mobileNav.innerHTML = mobileLinksHTML;
+            } else {
+                mobileNav.classList.add('hidden');
+                mobileBtn.innerHTML = '<i data-lucide="menu" class="h-6 w-6"></i>';
+            }
+        }
+
+        function render() {
+            const mainContainer = document.getElementById('app-main');
+            
+            // Header rendering
+            renderHeader();
+
+            // Main view rendering
+            if (selectedJob && currentPage === 'job-detail') {
+                mainContainer.innerHTML = getJobDetailViewHTML(selectedJob);
+            } else {
+                switch (currentPage) {
+                    case 'home': mainContainer.innerHTML = getHomeViewHTML(); break;
+                    case 'jobs': mainContainer.innerHTML = getJobsViewHTML(); break;
+                    case 'post-job': mainContainer.innerHTML = getPostJobViewHTML(); break;
+                    case 'login': mainContainer.innerHTML = getLoginViewHTML(); break;
+                    case 'candidate-dashboard': mainContainer.innerHTML = getCandidateDashboardViewHTML(); break;
+                    case 'employer-dashboard': mainContainer.innerHTML = getEmployerDashboardViewHTML(); break;
+                    default: mainContainer.innerHTML = getHomeViewHTML(); break;
+                }
+            }
+
+            // Re-initialize Lucide icons after HTML replacement
+            lucide.createIcons();
+        }
+
+        // Initialize application on load
+        window.onload = function() {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+            render();
+        };
+
+    </script>
+</body>
+</html>
