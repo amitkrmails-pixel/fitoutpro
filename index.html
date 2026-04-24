@@ -330,6 +330,161 @@
             if (window.scrollY > 200) btn.classList.remove('hidden');
             else btn.classList.add('hidden');
         });
-    </script>
+    <script type="module">
+    // 1. Import the functions you need from the SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 2. Your web app's Firebase configuration (COPY THIS FROM YOUR FIREBASE CONSOLE)
+    const firebaseConfig = {
+   apiKey: "AIzaSyCvq58T0xmOd7xpRaiHBjwcZWplFFjwh4c",
+   authDomain: "fitout-pro.firebaseapp.com",
+   projectId: "fitout-pro",
+   storageBucket: "fitout-pro.firebasestorage.app",
+   messagingSenderId: "858449825291",
+   appId: "1:858449825291:web:9fb9ce11d90a9a809e410e",
+   measurementId: "G-0H3JZ799X9"
+      };
+
+    // 3. Initialize Firebase & Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- Global Router Function (Modified to handle Async) ---
+    window.navigateTo = async function(page) {
+        const content = document.getElementById('app-content');
+        window.scrollTo(0, 0);
+        document.getElementById('mobile-menu').classList.add('hidden');
+        
+        switch(page) {
+            case 'home': renderHome(); break;
+            case 'jobs': await renderJobs(); break; // Now async to wait for data
+            case 'postjob': renderPostJob(); break;
+            case 'login': renderLogin(); break;
+            default: renderHome();
+        }
+        lucide.createIcons();
+    }
+
+    // --- Create a Job (Database Write) ---
+    window.handlePostJob = async function(event) {
+        event.preventDefault();
+        const btn = event.target.querySelector('button');
+        btn.innerText = "Posting...";
+        btn.disabled = true;
+
+        const jobData = {
+            title: event.target.title.value,
+            dept: event.target.dept.value,
+            location: event.target.location.value,
+            experience: event.target.experience.value,
+            salary: event.target.salary.value,
+            type: event.target.type.value,
+            description: event.target.description.value,
+            company: "UrbanEdge Interiors", // Default for now
+            createdAt: serverTimestamp()
+        };
+
+        try {
+            await addDoc(collection(db, "jobs"), jobData);
+            alert("Success! Your job is now live.");
+            navigateTo('home');
+        } catch (e) {
+            console.error("Error adding document: ", e);
+            alert("Error posting job. Check Firestore rules.");
+        }
+    }
+
+    // --- Load Jobs (Database Read) ---
+    async function renderJobs() {
+        const jobsContainer = document.getElementById('app-content');
+        jobsContainer.innerHTML = `<div class="py-20 text-center"><p>Loading jobs from database...</p></div>`;
+
+        try {
+            const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            let jobsHtml = "";
+
+            querySnapshot.forEach((doc) => {
+                const job = doc.data();
+                jobsHtml += `
+                    <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6 items-start animate-fade-in">
+                        <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100"><i data-lucide="building-2" class="text-blue-600 w-8 h-8"></i></div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-xl font-bold text-slate-900">${job.title}</h3>
+                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase">${job.type}</span>
+                            </div>
+                            <p class="text-slate-600 font-medium mb-4">${job.company} • ${job.location}</p>
+                            <div class="flex flex-wrap gap-4 text-sm text-slate-500">
+                                <span class="flex items-center gap-1.5"><i data-lucide="briefcase" class="w-4 h-4"></i> ${job.experience}</span>
+                                <span class="flex items-center gap-1.5"><i data-lucide="wallet" class="w-4 h-4"></i> ${job.salary}</span>
+                            </div>
+                        </div>
+                        <button class="w-full md:w-auto bg-blue-600 text-white font-bold py-2.5 px-8 rounded-xl hover:bg-blue-700">Apply</button>
+                    </div>`;
+            });
+
+            // Update UI with Sidebar and Job List
+            jobsContainer.innerHTML = `
+                <div class="bg-slate-50 py-12 animate-fade-in">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <aside class="w-full md:w-80 space-y-6">
+                                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                    <h3 class="font-bold text-slate-900 mb-6 flex items-center gap-2"><i data-lucide="filter" class="w-5 h-5"></i> Filters</h3>
+                                    <p class="text-sm text-slate-500">Niche: Corporate Fit-out</p>
+                                </div>
+                            </aside>
+                            <main class="flex-1">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-6">Live Openings</h2>
+                                <div class="space-y-6">${jobsHtml || '<p>No jobs found.</p>'}</div>
+                            </main>
+                        </div>
+                    </div>
+                </div>`;
+            lucide.createIcons();
+        } catch (e) {
+            console.error("Error fetching jobs: ", e);
+            jobsContainer.innerHTML = `<div class="py-20 text-center text-red-500 font-bold">Failed to load jobs. Did you set Firestore Rules to 'test mode'?</div>`;
+        }
+    }
+
+    // --- Post Job UI Renderer ---
+    function renderPostJob() {
+        document.getElementById('app-content').innerHTML = `
+            <div class="bg-slate-50 py-16 animate-fade-in">
+                <div class="max-w-3xl mx-auto px-4">
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+                        <div class="bg-slate-900 p-10 text-white">
+                            <h1 class="text-3xl font-bold mb-2">Post a New Job</h1>
+                            <p class="text-slate-400">Your job will be saved to our live database.</p>
+                        </div>
+                        <form id="job-form" class="p-10 space-y-6" onsubmit="handlePostJob(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Job Title*</label><input name="title" type="text" required class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none"></div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Department*</label><select name="dept" class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"><option>Project Execution</option><option>QS & Billing</option><option>Design</option><option>MEP</option></select></div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Location*</label><input name="location" type="text" required class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"></div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Salary*</label><input name="salary" type="text" placeholder="e.g. ₹8-12 LPA" required class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"></div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Experience*</label><input name="experience" type="text" placeholder="e.g. 5-8 Years" required class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"></div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Type</label><select name="type" class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"><option>Full-time</option><option>Contract</option></select></div>
+                            </div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">Description*</label><textarea name="description" rows="5" class="w-full border-slate-200 border rounded-xl p-4 focus:border-blue-500 outline-none"></textarea></div>
+                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all">Submit Job Posting</button>
+                        </form>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    // Other renderers (Home, Login) remain the same as before...
+    function renderHome() { /* Same as previous version */ }
+    function renderLogin() { /* Same as previous version */ }
+
+    // Initial Load
+    window.addEventListener('load', () => {
+        navigateTo('home');
+    });
+</script>
 </body>
 </html>
