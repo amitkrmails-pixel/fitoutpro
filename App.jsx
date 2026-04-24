@@ -1,298 +1,335 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, MapPin, Briefcase, ExternalLink, Filter, 
-  Hammer, CheckCircle, Clock, Building2, ChevronRight, 
-  Bookmark, Share2, DollarSign, Layout, PencilRuler, HardHat,
-  X
-} from 'lucide-react';
-
-// Firebase Imports
-import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot, query } from 'firebase/firestore';
-
-// Global variables provided by the environment
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'fitout-pro-default';
-
-const App = () => {
-  const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterLocation, setFilterLocation] = useState('All');
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [appliedJobs, setAppliedJobs] = useState(new Set());
-  const [savedJobs, setSavedJobs] = useState(new Set());
-  const [showMobileDetail, setShowMobileDetail] = useState(false);
-
-  // 1. Initialize Firebase and Auth
-  useEffect(() => {
-    if (!firebaseConfig) {
-      setLoading(false); // Fallback if no config
-      return;
-    }
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitoutJobs - Corporate Interior Fit-Out Job Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            scroll-behavior: smooth;
         }
-      } catch (error) {
-        console.error("Auth error:", error);
-      }
-    };
 
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
 
-  // 2. Fetch Real Jobs from Firestore
-  useEffect(() => {
-    if (!user || !firebaseConfig) return;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    const db = getFirestore();
-    // Path: /artifacts/{appId}/public/data/jobs
-    const jobsCollection = collection(db, 'artifacts', appId, 'public', 'data', 'jobs');
-    
-    const unsubscribe = onSnapshot(query(jobsCollection), 
-      (snapshot) => {
-        const jobsList = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        // Sort in memory (Rule 2: No complex queries)
-        const sortedJobs = jobsList.sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
-        
-        setJobs(sortedJobs);
-        if (sortedJobs.length > 0 && !selectedJob) setSelectedJob(sortedJobs[0]);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Firestore error:", error);
-        setLoading(false);
-      }
-    );
+        .category-card:hover .arrow-icon {
+            background-color: #2563eb;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
 
-    return () => unsubscribe();
-  }, [user]);
-
-  const handleJobSelect = (job) => {
-    setSelectedJob(job);
-    setShowMobileDetail(true);
-  };
-
-  const toggleApply = (id) => {
-    const newApplied = new Set(appliedJobs);
-    if (newApplied.has(id)) newApplied.delete(id);
-    else newApplied.add(id);
-    setAppliedJobs(newApplied);
-  };
-
-  const toggleSave = (id) => {
-    const newSaved = new Set(savedJobs);
-    if (newSaved.has(id)) newSaved.delete(id);
-    else newSaved.add(id);
-    setSavedJobs(newSaved);
-  };
-
-  const filteredJobs = jobs.filter(job => 
-    (job.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     job.company?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (filterLocation === 'All' || job.location?.includes(filterLocation))
-  );
-
-  const getCategoryIcon = (cat) => {
-    switch(cat) {
-      case 'Commercial': return <Building2 className="size-4" />;
-      case 'Joinery': return <Layout className="size-4" />;
-      case 'Retail': return <PencilRuler className="size-4" />;
-      default: return <HardHat className="size-4" />;
-    }
-  };
-
-  const JobDetailContent = ({ job }) => (
-    <div className="bg-white md:rounded-3xl shadow-xl md:border border-slate-200 overflow-hidden min-h-screen md:min-h-0">
-      <div className="p-8 border-b border-slate-100 bg-gradient-to-br from-indigo-50/50 to-white">
-        <div className="flex justify-between items-start mb-6">
-          <div className="size-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center p-3">
-            <Building2 className="text-indigo-600 size-full" />
-          </div>
-          <div className="flex gap-2">
-            {showMobileDetail && (
-              <button onClick={() => setShowMobileDetail(false)} className="md:hidden p-3 bg-slate-100 text-slate-600 rounded-xl">
-                <X className="size-5" />
-              </button>
-            )}
-            <button onClick={() => toggleSave(job.id)} className={`p-3 rounded-xl transition-colors ${savedJobs.has(job.id) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>
-              <Bookmark className="size-5" fill={savedJobs.has(job.id) ? "currentColor" : "none"} />
-            </button>
-            <button className="p-3 bg-slate-100 text-slate-400 rounded-xl hover:bg-slate-200 transition-colors">
-              <Share2 className="size-5" />
-            </button>
-          </div>
-        </div>
-        
-        <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-2 leading-tight">{job.title}</h2>
-        <div className="flex flex-wrap items-center gap-4 md:gap-6 text-slate-500 font-medium text-sm">
-          <span className="flex items-center gap-2"><Building2 className="size-4 text-indigo-500" /> {job.company}</span>
-          <span className="flex items-center gap-2"><MapPin className="size-4 text-indigo-500" /> {job.location}</span>
-          <span className="flex items-center gap-2"><Clock className="size-4 text-indigo-500" /> {job.type}</span>
-        </div>
-      </div>
-
-      <div className="p-8 space-y-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 rounded-2xl">
-            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Monthly Salary</p>
-            <p className="text-lg font-bold text-slate-800">{job.salary}</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-2xl">
-            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Sector</p>
-            <p className="text-lg font-bold text-slate-800">{job.category} Fit-out</p>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wider">
-            <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-            Project Overview
-          </h4>
-          <p className="text-slate-600 leading-relaxed text-sm">{job.description}</p>
-        </div>
-
-        <div>
-          <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wider">
-            <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-            Requirements
-          </h4>
-          <ul className="space-y-3">
-            {(job.requirements || []).map((req, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                <CheckCircle className="size-4 text-green-500 mt-0.5 shrink-0" /> {req}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row gap-4">
-          <button 
-            onClick={() => toggleApply(job.id)}
-            className={`flex-1 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg ${
-              appliedJobs.has(job.id) ? 'bg-green-500 text-white shadow-green-100' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100'
-            }`}
-          >
-            {appliedJobs.has(job.id) ? 'Application Sent' : 'Express Interest'}
-          </button>
-          <a href={job.link} target="_blank" rel="noreferrer" className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-            View Source <ExternalLink className="size-4" />
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 flex flex-col">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <div className="flex items-center gap-2">
-              <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
-                <Hammer className="text-white size-6" />
-              </div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900 italic">FITOUT<span className="text-indigo-600">PRO</span></h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-bold text-slate-400 hidden sm:block">SOLO FOUNDER MODE</span>
-            <div className="size-10 bg-slate-100 rounded-full border-2 border-white shadow-sm overflow-hidden">
-              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'guest'}`} alt="avatar" />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="bg-white border-b border-slate-200 py-6 px-6">
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-5" />
-            <input 
-              type="text" placeholder="Search fit-out roles..." 
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none transition-all text-slate-700 font-medium"
-              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="md:w-64 relative">
-            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-5" />
-            <select className="w-full pl-12 pr-10 py-4 bg-slate-50 rounded-2xl outline-none appearance-none font-medium text-slate-700" value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)}>
-              <option value="All">All Regions</option>
-              <optgroup label="Middle East">
-                <option value="Dubai">Dubai</option>
-                <option value="Abu Dhabi">Abu Dhabi</option>
-                <option value="Riyadh">Riyadh</option>
-              </optgroup>
-              <optgroup label="India">
-                <option value="Noida">Noida</option>
-                <option value="Bangalore">Bangalore</option>
-                <option value="Mumbai">Mumbai</option>
-              </optgroup>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <main className="flex-1 max-w-[1400px] mx-auto w-full flex relative overflow-hidden">
-        <section className={`w-full md:w-[450px] border-r border-slate-200 overflow-y-auto bg-white ${showMobileDetail ? 'hidden md:block' : 'block'}`}>
-          <div className="p-6">
-            <h2 className="font-bold text-slate-400 text-xs uppercase tracking-widest mb-6">LIVE OPPORTUNITIES ({filteredJobs.length})</h2>
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(n => <div key={n} className="h-32 bg-slate-50 rounded-2xl animate-pulse" />)}
-              </div>
-            ) : filteredJobs.length > 0 ? (
-              <div className="space-y-3">
-                {filteredJobs.map(job => (
-                  <div key={job.id} onClick={() => handleJobSelect(job)} className={`p-5 rounded-2xl border transition-all cursor-pointer relative ${selectedJob?.id === job.id ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100 hover:border-slate-300 bg-white shadow-sm'}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${selectedJob?.id === job.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                        {job.category}
-                      </div>
+    <!-- Navigation -->
+    <nav class="bg-white border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center">
+                    <button onclick="navigateTo('home')" class="flex items-center space-x-2 focus:outline-none">
+                        <div class="w-10 h-10 bg-slate-900 flex items-center justify-center rounded-lg">
+                            <i data-lucide="layout-grid" class="text-white w-6 h-6"></i>
+                        </div>
+                        <span class="text-2xl font-bold text-slate-900 tracking-tight">Fitout<span class="text-blue-600">Jobs</span></span>
+                    </button>
+                    <div class="hidden md:ml-10 md:flex md:space-x-8">
+                        <button onclick="navigateTo('jobs')" class="nav-link inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">Jobs</button>
+                        <button onclick="navigateTo('companies')" class="nav-link inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">Companies</button>
+                        <button onclick="navigateTo('careeradvice')" class="nav-link inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">Career Advice</button>
                     </div>
-                    <h3 className={`font-bold mb-1 line-clamp-1 ${selectedJob?.id === job.id ? 'text-indigo-900' : 'text-slate-800'}`}>{job.title}</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-3">{job.company}</p>
-                    <div className="text-xs text-slate-400 font-semibold">{job.location}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 text-slate-400">No jobs found in this region.</div>
-            )}
-          </div>
-        </section>
-
-        <section className={`flex-1 bg-slate-50 overflow-y-auto ${showMobileDetail ? 'fixed inset-0 z-40 md:relative md:z-0 md:flex' : 'hidden md:flex'}`}>
-          {selectedJob ? (
-            <div className="p-0 md:p-10 w-full max-w-3xl mx-auto">
-              <JobDetailContent job={selectedJob} />
+                </div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <button onclick="navigateTo('login')" class="text-slate-600 hover:text-slate-900 font-medium px-4 py-2">Login</button>
+                    <button onclick="navigateTo('postjob')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        Post a Job
+                    </button>
+                </div>
+                <div class="flex md:hidden items-center">
+                    <button onclick="toggleMobileMenu()" class="text-slate-600 focus:outline-none">
+                        <i data-lucide="menu" id="menu-icon" class="w-7 h-7"></i>
+                    </button>
+                </div>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center w-full text-slate-400">
-              <Layout className="size-16 mb-4 opacity-20" />
-              <p>Select a job to view details</p>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
-  );
-};
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-b px-4 pb-6 space-y-2">
+            <button onclick="navigateTo('jobs')" class="block w-full text-left py-3 font-medium border-b">Jobs</button>
+            <button onclick="navigateTo('companies')" class="block w-full text-left py-3 font-medium border-b">Companies</button>
+            <button onclick="navigateTo('login')" class="block w-full text-left py-3 font-medium border-b">Login</button>
+            <button onclick="navigateTo('postjob')" class="block w-full bg-blue-600 text-white py-3 rounded-lg text-center font-bold mt-4">Post a Job</button>
+        </div>
+    </nav>
 
-export default App;
+    <!-- Main Content Area -->
+    <main id="app-content"></main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-20 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
+                <div class="col-span-2">
+                    <div class="flex items-center space-x-2 mb-6">
+                        <div class="w-10 h-10 bg-blue-600 flex items-center justify-center rounded-lg">
+                            <i data-lucide="layout-grid" class="text-white w-6 h-6"></i>
+                        </div>
+                        <span class="text-2xl font-bold text-white tracking-tight">FitoutJobs</span>
+                    </div>
+                    <p class="text-slate-500 max-w-sm mb-6 leading-relaxed">
+                        The specialized career marketplace for the corporate interior fit-out industry. Connecting design, project, and execution talent with top firms.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                        <a href="#" class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+                        <a href="#" class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="facebook" class="w-5 h-5"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-6">For Candidates</h4>
+                    <ul class="space-y-4 text-sm font-medium">
+                        <li><a href="#" class="hover:text-white transition-all">Browse Jobs</a></li>
+                        <li><a href="#" class="hover:text-white transition-all">Project Portfolio Tips</a></li>
+                        <li><a href="#" class="hover:text-white transition-all">Resume Builder</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-6">For Employers</h4>
+                    <ul class="space-y-4 text-sm font-medium">
+                        <li><a href="#" class="hover:text-white transition-all">Post a Vacancy</a></li>
+                        <li><a href="#" class="hover:text-white transition-all">Access Talent Database</a></li>
+                        <li><a href="#" class="hover:text-white transition-all">Hiring Solutions</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-6">Company</h4>
+                    <ul class="space-y-4 text-sm font-medium">
+                        <li><a href="#" class="hover:text-white transition-all">About Us</a></li>
+                        <li><a href="#" class="hover:text-white transition-all">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-all">Terms of Use</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-10 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-600">
+                <p>© 2024 FitoutJobs Portal. All rights reserved.</p>
+                <p>Built for the Modern Workplace Industry</p>
+            </div>
+        </div>
+    </footer>
+
+    <button id="scroll-top" onclick="window.scrollTo({top:0, behavior:'smooth'})" class="hidden fixed bottom-8 right-8 bg-white border border-slate-200 p-3 rounded-full shadow-2xl hover:bg-slate-50 transition-all z-40">
+        <i data-lucide="chevron-up" class="text-slate-600"></i>
+    </button>
+
+    <script>
+        // --- Data ---
+        const JOB_CATEGORIES = [
+            { id: 'pm', title: 'Project Management', icon: 'hard-hat', count: 42, desc: 'For project managers, site leads, and operations professionals handling commercial fit-outs.' },
+            { id: 'qs', title: 'Quantity Surveying', icon: 'ruler', count: 28, desc: 'For QS professionals handling measurements, BOQ checking, and rate analysis.' },
+            { id: 'est', title: 'Estimation & Tendering', icon: 'calculator', count: 15, desc: 'For teams preparing BOQs, costing, vendor comparisons, and bid submissions.' },
+            { id: 'billing', title: 'Billing & Contracts', icon: 'file-text', count: 19, desc: 'For billing engineers, contract executives, and RA bill preparation.' },
+            { id: 'design', title: 'Design Coordination', icon: 'pen-tool', count: 34, desc: 'For coordinators, CAD draftsmen, 3D visualizers, and shop drawing teams.' },
+            { id: 'procurement', title: 'Procurement', icon: 'shopping-cart', count: 12, desc: 'For executives handling vendor development, material sourcing, and purchase orders.' },
+            { id: 'mep', title: 'MEP Coordination', icon: 'layers', count: 21, desc: 'For HVAC, electrical, plumbing, firefighting, and services coordination roles.' },
+            { id: 'qa', title: 'QA/QC & HSE', icon: 'shield-check', count: 8, desc: 'For quality engineers, safety officers, and inspection documentation.' }
+        ];
+
+        const DUMMY_JOBS = [
+            { id: 1, title: 'Senior Project Manager - Corporate Interior', company: 'UrbanEdge Interiors', location: 'Gurugram', experience: '8-12 Years', salary: '₹18 - 25 LPA', type: 'Full-time', dept: 'Project Execution', posted: '2 days ago', skills: ['MS Project', 'Fit-out Execution'] },
+            { id: 2, title: 'Quantity Surveyor (Interiors)', company: 'Workspace Buildcon', location: 'Mumbai', experience: '3-5 Years', salary: '₹6 - 9 LPA', type: 'Full-time', dept: 'QS & Billing', posted: '1 day ago', skills: ['BOQ', 'Rate Analysis'] },
+            { id: 3, title: 'Design Coordinator - AutoCAD', company: 'Apex Fit-Out Solutions', location: 'Bengaluru', experience: '2-4 Years', salary: '₹5 - 7 LPA', type: 'Contract', dept: 'Design', posted: '4 hours ago', skills: ['AutoCAD', 'Detailing'] },
+            { id: 4, title: 'MEP Coordinator', company: 'Metroline Projects', location: 'Noida', experience: '5-8 Years', salary: '₹10 - 15 LPA', type: 'Full-time', dept: 'MEP', posted: '3 days ago', skills: ['HVAC', 'Electrical'] }
+        ];
+
+        // --- Router Logic ---
+        function navigateTo(page) {
+            const content = document.getElementById('app-content');
+            window.scrollTo(0, 0);
+            document.getElementById('mobile-menu').classList.add('hidden');
+            
+            // Update Nav Active State
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const linkPage = link.textContent.toLowerCase().replace(' ', '');
+                if (linkPage === page) {
+                    link.classList.add('border-blue-600', 'text-slate-900');
+                    link.classList.remove('border-transparent', 'text-slate-500');
+                } else {
+                    link.classList.remove('border-blue-600', 'text-slate-900');
+                    link.classList.add('border-transparent', 'text-slate-500');
+                }
+            });
+
+            switch(page) {
+                case 'home': renderHome(); break;
+                case 'jobs': renderJobs(); break;
+                case 'postjob': renderPostJob(); break;
+                case 'login': renderLogin(); break;
+                default: renderHome();
+            }
+            lucide.createIcons();
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- Page Renderers ---
+        function renderHome() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="animate-fade-in">
+                    <section class="relative bg-slate-900 text-white overflow-hidden min-h-[600px] flex items-center">
+                        <div class="absolute inset-0 z-0">
+                            <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent z-10 md:w-3/4"></div>
+                            <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=2000" class="absolute right-0 top-0 h-full w-full md:w-1/2 object-cover opacity-60" alt="Hero">
+                        </div>
+                        <div class="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                            <div class="max-w-2xl">
+                                <p class="text-blue-400 font-bold uppercase tracking-widest text-sm mb-4">The Niche Platform</p>
+                                <h1 class="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">Find Jobs in <br/><span class="text-blue-400">Corporate Interior Fit-Out</span></h1>
+                                <p class="text-lg text-slate-300 mb-8 leading-relaxed">Dedicated to project, design, estimation, billing, and site coordination roles in the commercial interior industry.</p>
+                                <div class="bg-white p-2 rounded-xl shadow-2xl flex flex-col md:flex-row gap-2 max-w-4xl border border-slate-700/50">
+                                    <div class="flex-1 flex items-center px-4 border-r border-slate-100 py-3">
+                                        <i data-lucide="search" class="text-slate-400 mr-3 w-5 h-5"></i>
+                                        <input type="text" placeholder="Job Title or Keyword" class="w-full focus:outline-none text-slate-900 font-medium">
+                                    </div>
+                                    <button onclick="navigateTo('jobs')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-all flex items-center justify-center gap-2">Find Jobs <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="py-24 bg-white">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <h2 class="text-3xl font-extrabold text-slate-900 mb-12">Popular Categories</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                ${JOB_CATEGORIES.map(cat => `
+                                    <div onclick="navigateTo('jobs')" class="bg-slate-50 border border-slate-100 p-6 rounded-2xl hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all cursor-pointer group category-card">
+                                        <div class="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center rounded-xl mb-5 group-hover:bg-blue-50 transition-colors">
+                                            <i data-lucide="${cat.icon}" class="text-blue-600 w-7 h-7"></i>
+                                        </div>
+                                        <h3 class="text-xl font-bold text-slate-900 mb-2">${cat.title}</h3>
+                                        <p class="text-slate-500 text-sm leading-relaxed mb-4">${cat.desc}</p>
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-blue-600 font-bold">${cat.count} Jobs</span>
+                                            <span class="arrow-icon bg-slate-200 text-slate-600 w-8 h-8 flex items-center justify-center rounded-full transition-all"><i data-lucide="chevron-right" class="w-4 h-4"></i></span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            `;
+        }
+
+        function renderJobs() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="bg-slate-50 py-12 animate-fade-in">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex flex-col md:flex-row gap-8">
+                            <aside class="w-full md:w-80 space-y-6">
+                                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                    <h3 class="font-bold text-slate-900 mb-6 flex items-center gap-2"><i data-lucide="filter" class="w-5 h-5"></i> Filters</h3>
+                                    <div class="space-y-6">
+                                        <div>
+                                            <label class="block text-sm font-bold text-slate-700 mb-3">Department</label>
+                                            <div class="space-y-2">
+                                                ${['All', 'Project Execution', 'QS & Billing', 'Design', 'MEP'].map(d => `
+                                                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="dept" class="w-4 h-4 text-blue-600"><span class="text-slate-600 text-sm font-medium">${d}</span></label>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
+                            <main class="flex-1">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-6">Latest Job Openings</h2>
+                                <div class="space-y-6">
+                                    ${DUMMY_JOBS.map(job => `
+                                        <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6 items-start">
+                                            <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100"><i data-lucide="building-2" class="text-blue-600 w-8 h-8"></i></div>
+                                            <div class="flex-1">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <h3 class="text-xl font-bold text-slate-900">${job.title}</h3>
+                                                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase">${job.type}</span>
+                                                </div>
+                                                <p class="text-slate-600 font-medium mb-4">${job.company} • ${job.location}</p>
+                                                <div class="flex flex-wrap gap-4 text-sm text-slate-500">
+                                                    <span class="flex items-center gap-1.5"><i data-lucide="briefcase" class="w-4 h-4"></i> ${job.experience}</span>
+                                                    <span class="flex items-center gap-1.5"><i data-lucide="dollar-sign" class="w-4 h-4"></i> ${job.salary}</span>
+                                                </div>
+                                            </div>
+                                            <button class="w-full md:w-auto bg-blue-600 text-white font-bold py-2.5 px-8 rounded-xl hover:bg-blue-700">Apply</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </main>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPostJob() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="bg-slate-50 py-16 animate-fade-in">
+                    <div class="max-w-3xl mx-auto px-4">
+                        <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+                            <div class="bg-slate-900 p-10 text-white">
+                                <h1 class="text-3xl font-bold mb-2">Post a New Job</h1>
+                                <p class="text-slate-400">Reach specialized professionals in the corporate interior fit-out industry.</p>
+                            </div>
+                            <form class="p-10 space-y-6" onsubmit="event.preventDefault(); navigateTo('home')">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div><label class="block text-sm font-bold text-slate-700 mb-2">Job Title*</label><input type="text" required class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none"></div>
+                                    <div><label class="block text-sm font-bold text-slate-700 mb-2">Department*</label><select class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none"><option>Project Execution</option><option>QS & Billing</option></select></div>
+                                </div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Description*</label><textarea rows="5" class="w-full border-slate-200 border rounded-xl p-4 focus:border-blue-500 outline-none"></textarea></div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all">Submit Job Posting</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLogin() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="min-h-[70vh] flex items-center justify-center bg-slate-50 p-4 animate-fade-in">
+                    <div class="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md border border-slate-100">
+                        <h2 class="text-3xl font-extrabold text-slate-900 mb-8 text-center">Login to FitoutJobs</h2>
+                        <div class="space-y-4">
+                            <input type="email" placeholder="Email Address" class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none">
+                            <input type="password" placeholder="Password" class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none">
+                            <button onclick="navigateTo('home')" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mt-4 hover:bg-slate-800 transition-all shadow-lg">Login</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize App
+        window.addEventListener('load', () => {
+            navigateTo('home');
+            lucide.createIcons();
+        });
+
+        // Scroll to Top visibility
+        window.addEventListener('scroll', () => {
+            const btn = document.getElementById('scroll-top');
+            if (window.scrollY > 200) btn.classList.remove('hidden');
+            else btn.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
