@@ -1,490 +1,647 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitoutJobs - Corporate Interior Fit-Out Job Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            scroll-behavior: smooth;
-        }
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Search, MapPin, Briefcase, DollarSign, Clock, Filter, 
+  ChevronRight, LayoutGrid, Users, Building2, PlusCircle, 
+  User, LogOut, CheckCircle2, ChevronDown, Menu, X, 
+  ArrowRight, Star, FileText, Send, Bell, Settings,
+  HardHat, Ruler, Calculator, PenTool, ShoppingCart, 
+  ShieldCheck, TrendingUp, Wallet, Truck, Package, Layers
+} from 'lucide-react';
 
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
+// Firebase Imports
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInAnonymously, 
+  signInWithCustomToken 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  serverTimestamp,
+  query
+} from 'firebase/firestore';
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+// --- Firebase Configuration ---
+// Priority 1: Environment config, Priority 2: User provided config
+const firebaseConfig = typeof __firebase_config !== 'undefined' 
+  ? JSON.parse(__firebase_config) 
+  : {
+      apiKey: "AIzaSyCvq58T0xmOd7xpRaiHBjwcZWplFFjwh4c",
+      authDomain: "fitout-pro.firebaseapp.com",
+      projectId: "fitout-pro",
+      storageBucket: "fitout-pro.firebasestorage.app",
+      messagingSenderId: "858449825291",
+      appId: "1:858449825291:web:9fb9ce11d90a9a809e410e",
+      measurementId: "G-0H3JZ799X9"
+    };
 
-        .category-card:hover .arrow-icon {
-            background-color: #2563eb;
-            color: white;
-        }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-900">
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'fitout-pro';
 
-    <!-- Navigation -->
-    <nav class="bg-white border-b sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20">
-                <div class="flex items-center">
-                    <button onclick="navigateTo('home')" class="flex items-center space-x-2 focus:outline-none">
-                        <div class="w-10 h-10 bg-slate-900 flex items-center justify-center rounded-lg">
-                            <i data-lucide="layout-grid" class="text-white w-6 h-6"></i>
-                        </div>
-                        <span class="text-2xl font-bold text-slate-900 tracking-tight">Fitout<span class="text-blue-600">Jobs</span></span>
-                    </button>
-                    <div class="hidden md:ml-10 md:flex md:space-x-8">
-                        <button onclick="navigateTo('jobs')" class="nav-link inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">Jobs</button>
-                        <button onclick="navigateTo('companies')" class="nav-link inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">Companies</button>
-                        <button onclick="navigateTo('careeradvice')" class="nav-link inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors">Career Advice</button>
-                    </div>
-                </div>
-                <div class="hidden md:flex items-center space-x-4">
-                    <button onclick="navigateTo('login')" class="text-slate-600 hover:text-slate-900 font-medium px-4 py-2">Login</button>
-                    <button onclick="navigateTo('postjob')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                        Post a Job
-                    </button>
-                </div>
-                <div class="flex md:hidden items-center">
-                    <button onclick="toggleMobileMenu()" class="text-slate-600 focus:outline-none">
-                        <i data-lucide="menu" id="menu-icon" class="w-7 h-7"></i>
-                    </button>
-                </div>
+// --- Static Data ---
+
+const JOB_CATEGORIES = [
+  { id: 'pm', title: 'Project Management', icon: HardHat, count: 42, desc: 'For project managers, site leads, and operations professionals handling commercial fit-outs.' },
+  { id: 'qs', title: 'Quantity Surveying', icon: Ruler, count: 28, desc: 'For QS professionals handling measurements, BOQ checking, and rate analysis.' },
+  { id: 'est', title: 'Estimation & Tendering', icon: Calculator, count: 15, desc: 'For teams preparing BOQs, costing, vendor comparisons, and bid submissions.' },
+  { id: 'billing', title: 'Billing & Contracts', icon: FileText, count: 19, desc: 'For billing engineers, contract executives, and RA bill preparation.' },
+  { id: 'design', title: 'Design Coordination', icon: PenTool, count: 34, desc: 'For coordinators, CAD draftsmen, 3D visualizers, and shop drawing teams.' },
+  { id: 'procurement', title: 'Procurement', icon: ShoppingCart, count: 12, desc: 'For executives handling vendor development, material sourcing, and purchase orders.' },
+  { id: 'mep', title: 'MEP Coordination', icon: Layers, count: 21, desc: 'For HVAC, electrical, plumbing, firefighting, and services coordination roles.' },
+  { id: 'qa', title: 'QA/QC & HSE', icon: ShieldCheck, count: 8, desc: 'For quality engineers, safety officers, and inspection documentation.' },
+  { id: 'bd', title: 'Business Development', icon: TrendingUp, count: 25, desc: 'For sales, client acquisition, and corporate relations in interior contracting.' },
+  { id: 'accounts', title: 'Accounts & Finance', icon: Wallet, count: 14, desc: 'For project accounts, vendor payments, and client invoicing.' },
+  { id: 'runner', title: 'Runner / Office Support', icon: Truck, count: 7, desc: 'For document collection, material movement, and site-to-office coordination.' },
+  { id: 'store', title: 'Store & Inventory', icon: Package, count: 11, desc: 'For site store management, stock registers, and material inward/outward records.' },
+];
+
+const INITIAL_FALLBACK_JOBS = [
+  {
+    id: 'f1',
+    title: 'Senior Project Manager - Corporate Interior',
+    company: 'UrbanEdge Interiors',
+    location: 'Gurugram',
+    experience: '8-12 Years',
+    salary: '₹18 - 25 LPA',
+    type: 'Full-time',
+    dept: 'Project Execution',
+    posted: '2 days ago',
+    skills: ['MS Project', 'Fit-out Execution', 'Client Handling'],
+    desc: 'We are looking for a seasoned Project Manager to lead large-scale commercial design-build projects...'
+  },
+  {
+    id: 'f2',
+    title: 'Quantity Surveyor (Interiors)',
+    company: 'Workspace Buildcon',
+    location: 'Mumbai',
+    experience: '3-5 Years',
+    salary: '₹6 - 9 LPA',
+    type: 'Full-time',
+    dept: 'QS & Billing',
+    posted: '1 day ago',
+    skills: ['BOQ', 'Rate Analysis', 'Excel'],
+    desc: 'Responsible for BOQ verification, subcontractor billing, and material reconciliation...'
+  }
+];
+
+// --- Components ---
+
+const Navbar = ({ currentPage, setPage, user }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <nav className="bg-white border-b sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-20">
+          <div className="flex items-center">
+            <button onClick={() => setPage('home')} className="flex items-center space-x-2 focus:outline-none">
+              <div className="w-10 h-10 bg-slate-900 flex items-center justify-center rounded-lg">
+                <LayoutGrid className="text-white w-6 h-6" />
+              </div>
+              <span className="text-2xl font-bold text-slate-900 tracking-tight">Fitout<span className="text-blue-600">Jobs</span></span>
+            </button>
+            <div className="hidden md:ml-10 md:flex md:space-x-8">
+              {['Jobs', 'Companies', 'Career Advice'].map((item) => {
+                const pageId = item.toLowerCase().replace(' ', '');
+                return (
+                  <button
+                    key={item}
+                    onClick={() => setPage(pageId)}
+                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-200 focus:outline-none ${
+                      currentPage === pageId
+                      ? 'border-blue-600 text-slate-900' 
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
             </div>
+          </div>
+          <div className="hidden md:flex items-center space-x-4">
+            {user ? (
+              <span className="text-xs text-slate-400 font-mono">ID: {user.uid.slice(0, 8)}</span>
+            ) : (
+              <button 
+                onClick={() => setPage('login')}
+                className="text-slate-600 hover:text-slate-900 font-medium px-4 py-2 focus:outline-none"
+              >
+                Login
+              </button>
+            )}
+            <button 
+              onClick={() => setPage('postjob')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2 focus:outline-none"
+            >
+              <PlusCircle size={18} />
+              Post a Job
+            </button>
+          </div>
+          <div className="flex md:hidden items-center">
+            <button onClick={() => setIsOpen(!isOpen)} className="text-slate-600 focus:outline-none">
+              {isOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
         </div>
-        <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-b px-4 pb-6 space-y-2">
-            <button onclick="navigateTo('jobs')" class="block w-full text-left py-3 font-medium border-b">Jobs</button>
-            <button onclick="navigateTo('companies')" class="block w-full text-left py-3 font-medium border-b">Companies</button>
-            <button onclick="navigateTo('login')" class="block w-full text-left py-3 font-medium border-b">Login</button>
-            <button onclick="navigateTo('postjob')" class="block w-full bg-blue-600 text-white py-3 rounded-lg text-center font-bold mt-4">Post a Job</button>
+      </div>
+
+      {isOpen && (
+        <div className="md:hidden bg-white border-b px-4 pb-6 space-y-2">
+          <button onClick={() => {setPage('jobs'); setIsOpen(false)}} className="block w-full text-left py-3 font-medium border-b focus:outline-none">Jobs</button>
+          <button onClick={() => {setPage('companies'); setIsOpen(false)}} className="block w-full text-left py-3 font-medium border-b focus:outline-none">Companies</button>
+          <button onClick={() => {setPage('login'); setIsOpen(false)}} className="block w-full text-left py-3 font-medium border-b focus:outline-none">Login</button>
+          <button onClick={() => {setPage('postjob'); setIsOpen(false)}} className="block w-full bg-blue-600 text-white py-3 rounded-lg text-center font-bold mt-4 focus:outline-none">Post a Job</button>
         </div>
+      )}
     </nav>
+  );
+};
 
-    <!-- Main Content Area -->
-    <main id="app-content"></main>
+const JobCard = ({ job, setPage }) => (
+  <div className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-all group">
+    <div className="flex justify-between items-start mb-4">
+      <div>
+        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{job.title}</h3>
+        <p className="text-slate-600 flex items-center gap-1 mt-1 font-medium">
+          <Building2 size={16} /> {job.company}
+        </p>
+      </div>
+      <button className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none">
+        <Star size={20} />
+      </button>
+    </div>
+    <div className="grid grid-cols-2 gap-y-2 mb-4 text-sm text-slate-500">
+      <div className="flex items-center gap-2"><MapPin size={16} /> {job.location}</div>
+      <div className="flex items-center gap-2"><Briefcase size={16} /> {job.experience}</div>
+      <div className="flex items-center gap-2"><DollarSign size={16} /> {job.salary}</div>
+      <div className="flex items-center gap-2"><Clock size={16} /> {job.posted || 'Recent'}</div>
+    </div>
+    <div className="flex flex-wrap gap-2 mb-5">
+      {job.skills && job.skills.map((skill, idx) => (
+        <span key={idx} className="bg-slate-50 text-slate-600 px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">
+          {skill}
+        </span>
+      ))}
+    </div>
+    <div className="flex gap-2">
+      <button 
+        onClick={() => setPage('jobs')}
+        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold transition-colors text-center focus:outline-none"
+      >
+        Apply Now
+      </button>
+      <button className="px-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors focus:outline-none">
+        <ChevronRight size={20} className="text-slate-600" />
+      </button>
+    </div>
+  </div>
+);
 
-    <!-- Footer -->
-    <footer class="bg-slate-900 text-slate-400 py-20 border-t border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
-                <div class="col-span-2">
-                    <div class="flex items-center space-x-2 mb-6">
-                        <div class="w-10 h-10 bg-blue-600 flex items-center justify-center rounded-lg">
-                            <i data-lucide="layout-grid" class="text-white w-6 h-6"></i>
-                        </div>
-                        <span class="text-2xl font-bold text-white tracking-tight">FitoutJobs</span>
-                    </div>
-                    <p class="text-slate-500 max-w-sm mb-6 leading-relaxed">
-                        The specialized career marketplace for the corporate interior fit-out industry. Connecting design, project, and execution talent with top firms.
-                    </p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="twitter" class="w-5 h-5"></i></a>
-                        <a href="#" class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
-                        <a href="#" class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="facebook" class="w-5 h-5"></i></a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-white font-bold mb-6">For Candidates</h4>
-                    <ul class="space-y-4 text-sm font-medium">
-                        <li><a href="#" class="hover:text-white transition-all">Browse Jobs</a></li>
-                        <li><a href="#" class="hover:text-white transition-all">Project Portfolio Tips</a></li>
-                        <li><a href="#" class="hover:text-white transition-all">Resume Builder</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-bold mb-6">For Employers</h4>
-                    <ul class="space-y-4 text-sm font-medium">
-                        <li><a href="#" class="hover:text-white transition-all">Post a Vacancy</a></li>
-                        <li><a href="#" class="hover:text-white transition-all">Access Talent Database</a></li>
-                        <li><a href="#" class="hover:text-white transition-all">Hiring Solutions</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-bold mb-6">Company</h4>
-                    <ul class="space-y-4 text-sm font-medium">
-                        <li><a href="#" class="hover:text-white transition-all">About Us</a></li>
-                        <li><a href="#" class="hover:text-white transition-all">Privacy Policy</a></li>
-                        <li><a href="#" class="hover:text-white transition-all">Terms of Use</a></li>
-                    </ul>
-                </div>
+// --- Page Components ---
+
+const HomePage = ({ setPage, jobs }) => (
+  <div className="animate-in fade-in duration-500">
+    <section className="relative bg-slate-900 text-white overflow-hidden min-h-[600px] flex items-center">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent z-10 md:w-3/4"></div>
+        <img 
+          src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=2000" 
+          className="absolute right-0 top-0 h-full w-full md:w-1/2 object-cover opacity-60" 
+          alt="Modern Corporate Office"
+        />
+      </div>
+
+      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-2xl">
+          <p className="text-blue-400 font-bold uppercase tracking-widest text-sm mb-4">The Niche Platform</p>
+          <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
+            Find Jobs in <br/>
+            <span className="text-blue-400">Corporate Interior Fit-Out</span>
+          </h1>
+          <p className="text-lg text-slate-300 mb-8 leading-relaxed">
+            A dedicated job platform for project, design, estimation, billing, procurement, accounts, and site coordination roles in the commercial interior industry.
+          </p>
+
+          <div className="bg-white p-2 rounded-xl shadow-2xl flex flex-col md:flex-row gap-2 max-w-4xl border border-slate-700/50">
+            <div className="flex-1 flex items-center px-4 border-r border-slate-100 py-3">
+              <Search className="text-slate-400 mr-3" size={20} />
+              <input type="text" placeholder="Job Title, Keyword or Role" className="w-full focus:outline-none text-slate-900 font-medium" />
             </div>
-            <div class="pt-10 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-600">
-                <p>© 2024 FitoutJobs Portal. All rights reserved.</p>
-                <p>Built for the Modern Workplace Industry</p>
+            <div className="flex-1 flex items-center px-4 py-3">
+              <MapPin className="text-slate-400 mr-3" size={20} />
+              <input type="text" placeholder="City or Region" className="w-full focus:outline-none text-slate-900 font-medium" />
             </div>
+            <button 
+              onClick={() => setPage('jobs')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-all flex items-center justify-center gap-2 focus:outline-none"
+            >
+              Find Jobs <ArrowRight size={20} />
+            </button>
+          </div>
+          <p className="mt-6 text-sm text-slate-400 font-medium italic">
+            Built for interior contractors, PMCs, design firms, vendors, and fit-out professionals.
+          </p>
         </div>
-    </footer>
+      </div>
+    </section>
 
-    <button id="scroll-top" onclick="window.scrollTo({top:0, behavior:'smooth'})" class="hidden fixed bottom-8 right-8 bg-white border border-slate-200 p-3 rounded-full shadow-2xl hover:bg-slate-50 transition-all z-40">
-        <i data-lucide="chevron-up" class="text-slate-600"></i>
-    </button>
-
-    <script>
-        // --- Data ---
-        const JOB_CATEGORIES = [
-            { id: 'pm', title: 'Project Management', icon: 'hard-hat', count: 42, desc: 'For project managers, site leads, and operations professionals handling commercial fit-outs.' },
-            { id: 'qs', title: 'Quantity Surveying', icon: 'ruler', count: 28, desc: 'For QS professionals handling measurements, BOQ checking, and rate analysis.' },
-            { id: 'est', title: 'Estimation & Tendering', icon: 'calculator', count: 15, desc: 'For teams preparing BOQs, costing, vendor comparisons, and bid submissions.' },
-            { id: 'billing', title: 'Billing & Contracts', icon: 'file-text', count: 19, desc: 'For billing engineers, contract executives, and RA bill preparation.' },
-            { id: 'design', title: 'Design Coordination', icon: 'pen-tool', count: 34, desc: 'For coordinators, CAD draftsmen, 3D visualizers, and shop drawing teams.' },
-            { id: 'procurement', title: 'Procurement', icon: 'shopping-cart', count: 12, desc: 'For executives handling vendor development, material sourcing, and purchase orders.' },
-            { id: 'mep', title: 'MEP Coordination', icon: 'layers', count: 21, desc: 'For HVAC, electrical, plumbing, firefighting, and services coordination roles.' },
-            { id: 'qa', title: 'QA/QC & HSE', icon: 'shield-check', count: 8, desc: 'For quality engineers, safety officers, and inspection documentation.' }
-        ];
-
-        const DUMMY_JOBS = [
-            { id: 1, title: 'Senior Project Manager - Corporate Interior', company: 'UrbanEdge Interiors', location: 'Gurugram', experience: '8-12 Years', salary: '₹18 - 25 LPA', type: 'Full-time', dept: 'Project Execution', posted: '2 days ago', skills: ['MS Project', 'Fit-out Execution'] },
-            { id: 2, title: 'Quantity Surveyor (Interiors)', company: 'Workspace Buildcon', location: 'Mumbai', experience: '3-5 Years', salary: '₹6 - 9 LPA', type: 'Full-time', dept: 'QS & Billing', posted: '1 day ago', skills: ['BOQ', 'Rate Analysis'] },
-            { id: 3, title: 'Design Coordinator - AutoCAD', company: 'Apex Fit-Out Solutions', location: 'Bengaluru', experience: '2-4 Years', salary: '₹5 - 7 LPA', type: 'Contract', dept: 'Design', posted: '4 hours ago', skills: ['AutoCAD', 'Detailing'] },
-            { id: 4, title: 'MEP Coordinator', company: 'Metroline Projects', location: 'Noida', experience: '5-8 Years', salary: '₹10 - 15 LPA', type: 'Full-time', dept: 'MEP', posted: '3 days ago', skills: ['HVAC', 'Electrical'] }
-        ];
-
-        // --- Router Logic ---
-        function navigateTo(page) {
-            const content = document.getElementById('app-content');
-            window.scrollTo(0, 0);
-            document.getElementById('mobile-menu').classList.add('hidden');
-            
-            // Update Nav Active State
-            document.querySelectorAll('.nav-link').forEach(link => {
-                const linkPage = link.textContent.toLowerCase().replace(' ', '');
-                if (linkPage === page) {
-                    link.classList.add('border-blue-600', 'text-slate-900');
-                    link.classList.remove('border-transparent', 'text-slate-500');
-                } else {
-                    link.classList.remove('border-blue-600', 'text-slate-900');
-                    link.classList.add('border-transparent', 'text-slate-500');
-                }
-            });
-
-            switch(page) {
-                case 'home': renderHome(); break;
-                case 'jobs': renderJobs(); break;
-                case 'postjob': renderPostJob(); break;
-                case 'login': renderLogin(); break;
-                default: renderHome();
-            }
-            lucide.createIcons();
-        }
-
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
-        }
-
-        // --- Page Renderers ---
-        function renderHome() {
-            document.getElementById('app-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <section class="relative bg-slate-900 text-white overflow-hidden min-h-[600px] flex items-center">
-                        <div class="absolute inset-0 z-0">
-                            <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent z-10 md:w-3/4"></div>
-                            <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=2000" class="absolute right-0 top-0 h-full w-full md:w-1/2 object-cover opacity-60" alt="Hero">
-                        </div>
-                        <div class="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                            <div class="max-w-2xl">
-                                <p class="text-blue-400 font-bold uppercase tracking-widest text-sm mb-4">The Niche Platform</p>
-                                <h1 class="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">Find Jobs in <br/><span class="text-blue-400">Corporate Interior Fit-Out</span></h1>
-                                <p class="text-lg text-slate-300 mb-8 leading-relaxed">Dedicated to project, design, estimation, billing, and site coordination roles in the commercial interior industry.</p>
-                                <div class="bg-white p-2 rounded-xl shadow-2xl flex flex-col md:flex-row gap-2 max-w-4xl border border-slate-700/50">
-                                    <div class="flex-1 flex items-center px-4 border-r border-slate-100 py-3">
-                                        <i data-lucide="search" class="text-slate-400 mr-3 w-5 h-5"></i>
-                                        <input type="text" placeholder="Job Title or Keyword" class="w-full focus:outline-none text-slate-900 font-medium">
-                                    </div>
-                                    <button onclick="navigateTo('jobs')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-all flex items-center justify-center gap-2">Find Jobs <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="py-24 bg-white">
-                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                            <h2 class="text-3xl font-extrabold text-slate-900 mb-12">Popular Categories</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                ${JOB_CATEGORIES.map(cat => `
-                                    <div onclick="navigateTo('jobs')" class="bg-slate-50 border border-slate-100 p-6 rounded-2xl hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all cursor-pointer group category-card">
-                                        <div class="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center rounded-xl mb-5 group-hover:bg-blue-50 transition-colors">
-                                            <i data-lucide="${cat.icon}" class="text-blue-600 w-7 h-7"></i>
-                                        </div>
-                                        <h3 class="text-xl font-bold text-slate-900 mb-2">${cat.title}</h3>
-                                        <p class="text-slate-500 text-sm leading-relaxed mb-4">${cat.desc}</p>
-                                        <div class="flex justify-between items-center text-sm">
-                                            <span class="text-blue-600 font-bold">${cat.count} Jobs</span>
-                                            <span class="arrow-icon bg-slate-200 text-slate-600 w-8 h-8 flex items-center justify-center rounded-full transition-all"><i data-lucide="chevron-right" class="w-4 h-4"></i></span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            `;
-        }
-
-        function renderJobs() {
-            document.getElementById('app-content').innerHTML = `
-                <div class="bg-slate-50 py-12 animate-fade-in">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div class="flex flex-col md:flex-row gap-8">
-                            <aside class="w-full md:w-80 space-y-6">
-                                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                                    <h3 class="font-bold text-slate-900 mb-6 flex items-center gap-2"><i data-lucide="filter" class="w-5 h-5"></i> Filters</h3>
-                                    <div class="space-y-6">
-                                        <div>
-                                            <label class="block text-sm font-bold text-slate-700 mb-3">Department</label>
-                                            <div class="space-y-2">
-                                                ${['All', 'Project Execution', 'QS & Billing', 'Design', 'MEP'].map(d => `
-                                                    <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="dept" class="w-4 h-4 text-blue-600"><span class="text-slate-600 text-sm font-medium">${d}</span></label>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </aside>
-                            <main class="flex-1">
-                                <h2 class="text-2xl font-bold text-slate-900 mb-6">Latest Job Openings</h2>
-                                <div class="space-y-6">
-                                    ${DUMMY_JOBS.map(job => `
-                                        <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6 items-start">
-                                            <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100"><i data-lucide="building-2" class="text-blue-600 w-8 h-8"></i></div>
-                                            <div class="flex-1">
-                                                <div class="flex justify-between items-center mb-2">
-                                                    <h3 class="text-xl font-bold text-slate-900">${job.title}</h3>
-                                                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase">${job.type}</span>
-                                                </div>
-                                                <p class="text-slate-600 font-medium mb-4">${job.company} • ${job.location}</p>
-                                                <div class="flex flex-wrap gap-4 text-sm text-slate-500">
-                                                    <span class="flex items-center gap-1.5"><i data-lucide="briefcase" class="w-4 h-4"></i> ${job.experience}</span>
-                                                    <span class="flex items-center gap-1.5"><i data-lucide="dollar-sign" class="w-4 h-4"></i> ${job.salary}</span>
-                                                </div>
-                                            </div>
-                                            <button class="w-full md:w-auto bg-blue-600 text-white font-bold py-2.5 px-8 rounded-xl hover:bg-blue-700">Apply</button>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </main>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderPostJob() {
-            document.getElementById('app-content').innerHTML = `
-                <div class="bg-slate-50 py-16 animate-fade-in">
-                    <div class="max-w-3xl mx-auto px-4">
-                        <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
-                            <div class="bg-slate-900 p-10 text-white">
-                                <h1 class="text-3xl font-bold mb-2">Post a New Job</h1>
-                                <p class="text-slate-400">Reach specialized professionals in the corporate interior fit-out industry.</p>
-                            </div>
-                            <form class="p-10 space-y-6" onsubmit="event.preventDefault(); navigateTo('home')">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div><label class="block text-sm font-bold text-slate-700 mb-2">Job Title*</label><input type="text" required class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none"></div>
-                                    <div><label class="block text-sm font-bold text-slate-700 mb-2">Department*</label><select class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none"><option>Project Execution</option><option>QS & Billing</option></select></div>
-                                </div>
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Description*</label><textarea rows="5" class="w-full border-slate-200 border rounded-xl p-4 focus:border-blue-500 outline-none"></textarea></div>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all">Submit Job Posting</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderLogin() {
-            document.getElementById('app-content').innerHTML = `
-                <div class="min-h-[70vh] flex items-center justify-center bg-slate-50 p-4 animate-fade-in">
-                    <div class="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md border border-slate-100">
-                        <h2 class="text-3xl font-extrabold text-slate-900 mb-8 text-center">Login to FitoutJobs</h2>
-                        <div class="space-y-4">
-                            <input type="email" placeholder="Email Address" class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none">
-                            <input type="password" placeholder="Password" class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none">
-                            <button onclick="navigateTo('home')" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mt-4 hover:bg-slate-800 transition-all shadow-lg">Login</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Initialize App
-        window.addEventListener('load', () => {
-            navigateTo('home');
-            lucide.createIcons();
-        });
-
-        // Scroll to Top visibility
-        window.addEventListener('scroll', () => {
-            const btn = document.getElementById('scroll-top');
-            if (window.scrollY > 200) btn.classList.remove('hidden');
-            else btn.classList.add('hidden');
-        });
-    <script type="module">
-    // 1. Import the functions you need from the SDKs
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    // 2. Your web app's Firebase configuration (COPY THIS FROM YOUR FIREBASE CONSOLE)
-    const firebaseConfig = {
-   apiKey: "AIzaSyCvq58T0xmOd7xpRaiHBjwcZWplFFjwh4c",
-   authDomain: "fitout-pro.firebaseapp.com",
-   projectId: "fitout-pro",
-   storageBucket: "fitout-pro.firebasestorage.app",
-   messagingSenderId: "858449825291",
-   appId: "1:858449825291:web:9fb9ce11d90a9a809e410e",
-   measurementId: "G-0H3JZ799X9"
-      };
-
-    // 3. Initialize Firebase & Firestore
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // --- Global Router Function (Modified to handle Async) ---
-    window.navigateTo = async function(page) {
-        const content = document.getElementById('app-content');
-        window.scrollTo(0, 0);
-        document.getElementById('mobile-menu').classList.add('hidden');
+    <section className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-end mb-12">
+          <div>
+            <h2 className="text-3xl font-extrabold text-slate-900">Popular Categories</h2>
+            <p className="text-slate-500 mt-2 text-lg">Explore roles based on your specialization</p>
+          </div>
+          <button onClick={() => setPage('jobs')} className="hidden md:flex items-center text-blue-600 font-bold hover:underline gap-1 focus:outline-none">
+            Browse All Roles <ChevronRight size={18} />
+          </button>
+        </div>
         
-        switch(page) {
-            case 'home': renderHome(); break;
-            case 'jobs': await renderJobs(); break; // Now async to wait for data
-            case 'postjob': renderPostJob(); break;
-            case 'login': renderLogin(); break;
-            default: renderHome();
-        }
-        lucide.createIcons();
-    }
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {JOB_CATEGORIES.map((cat) => (
+            <div 
+              key={cat.id} 
+              className="bg-slate-50 border border-slate-100 p-6 rounded-2xl hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all cursor-pointer group"
+              onClick={() => setPage('jobs')}
+            >
+              <div className="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center rounded-xl mb-5 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+                <cat.icon className="text-blue-600 w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">{cat.title}</h3>
+              <p className="text-slate-500 text-sm leading-relaxed mb-4">{cat.desc}</p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-blue-600 font-bold">{cat.count} Open Jobs</span>
+                <span className="bg-slate-200 text-slate-600 w-8 h-8 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <ChevronRight size={16} />
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
 
-    // --- Create a Job (Database Write) ---
-    window.handlePostJob = async function(event) {
-        event.preventDefault();
-        const btn = event.target.querySelector('button');
-        btn.innerText = "Posting...";
-        btn.disabled = true;
+    <section className="py-24 bg-slate-50 border-y border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-extrabold text-slate-900">Featured Job Openings</h2>
+          <p className="text-slate-500 mt-4 text-xl max-w-2xl mx-auto">Latest opportunities from top design-build firms and fit-out contractors.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {(jobs && jobs.length > 0 ? jobs : INITIAL_FALLBACK_JOBS).slice(0, 6).map((job) => (
+            <JobCard key={job.id} job={job} setPage={setPage} />
+          ))}
+        </div>
+        <div className="mt-16 text-center">
+          <button 
+            onClick={() => setPage('jobs')}
+            className="bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-700 font-bold py-4 px-10 rounded-xl transition-all shadow-sm focus:outline-none"
+          >
+            View More Openings
+          </button>
+        </div>
+      </div>
+    </section>
 
-        const jobData = {
-            title: event.target.title.value,
-            dept: event.target.dept.value,
-            location: event.target.location.value,
-            experience: event.target.experience.value,
-            salary: event.target.salary.value,
-            type: event.target.type.value,
-            description: event.target.description.value,
-            company: "UrbanEdge Interiors", // Default for now
-            createdAt: serverTimestamp()
-        };
-
-        try {
-            await addDoc(collection(db, "jobs"), jobData);
-            alert("Success! Your job is now live.");
-            navigateTo('home');
-        } catch (e) {
-            console.error("Error adding document: ", e);
-            alert("Error posting job. Check Firestore rules.");
-        }
-    }
-
-    // --- Load Jobs (Database Read) ---
-    async function renderJobs() {
-        const jobsContainer = document.getElementById('app-content');
-        jobsContainer.innerHTML = `<div class="py-20 text-center"><p>Loading jobs from database...</p></div>`;
-
-        try {
-            const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
-            let jobsHtml = "";
-
-            querySnapshot.forEach((doc) => {
-                const job = doc.data();
-                jobsHtml += `
-                    <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6 items-start animate-fade-in">
-                        <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100"><i data-lucide="building-2" class="text-blue-600 w-8 h-8"></i></div>
-                        <div class="flex-1">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-xl font-bold text-slate-900">${job.title}</h3>
-                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase">${job.type}</span>
-                            </div>
-                            <p class="text-slate-600 font-medium mb-4">${job.company} • ${job.location}</p>
-                            <div class="flex flex-wrap gap-4 text-sm text-slate-500">
-                                <span class="flex items-center gap-1.5"><i data-lucide="briefcase" class="w-4 h-4"></i> ${job.experience}</span>
-                                <span class="flex items-center gap-1.5"><i data-lucide="wallet" class="w-4 h-4"></i> ${job.salary}</span>
-                            </div>
-                        </div>
-                        <button class="w-full md:w-auto bg-blue-600 text-white font-bold py-2.5 px-8 rounded-xl hover:bg-blue-700">Apply</button>
-                    </div>`;
-            });
-
-            // Update UI with Sidebar and Job List
-            jobsContainer.innerHTML = `
-                <div class="bg-slate-50 py-12 animate-fade-in">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div class="flex flex-col md:flex-row gap-8">
-                            <aside class="w-full md:w-80 space-y-6">
-                                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                                    <h3 class="font-bold text-slate-900 mb-6 flex items-center gap-2"><i data-lucide="filter" class="w-5 h-5"></i> Filters</h3>
-                                    <p class="text-sm text-slate-500">Niche: Corporate Fit-out</p>
-                                </div>
-                            </aside>
-                            <main class="flex-1">
-                                <h2 class="text-2xl font-bold text-slate-900 mb-6">Live Openings</h2>
-                                <div class="space-y-6">${jobsHtml || '<p>No jobs found.</p>'}</div>
-                            </main>
-                        </div>
-                    </div>
-                </div>`;
-            lucide.createIcons();
-        } catch (e) {
-            console.error("Error fetching jobs: ", e);
-            jobsContainer.innerHTML = `<div class="py-20 text-center text-red-500 font-bold">Failed to load jobs. Did you set Firestore Rules to 'test mode'?</div>`;
-        }
-    }
-
-    // --- Post Job UI Renderer ---
-    function renderPostJob() {
-        document.getElementById('app-content').innerHTML = `
-            <div class="bg-slate-50 py-16 animate-fade-in">
-                <div class="max-w-3xl mx-auto px-4">
-                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
-                        <div class="bg-slate-900 p-10 text-white">
-                            <h1 class="text-3xl font-bold mb-2">Post a New Job</h1>
-                            <p class="text-slate-400">Your job will be saved to our live database.</p>
-                        </div>
-                        <form id="job-form" class="p-10 space-y-6" onsubmit="handlePostJob(event)">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Job Title*</label><input name="title" type="text" required class="w-full border-slate-200 border rounded-xl p-3.5 focus:border-blue-500 outline-none"></div>
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Department*</label><select name="dept" class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"><option>Project Execution</option><option>QS & Billing</option><option>Design</option><option>MEP</option></select></div>
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Location*</label><input name="location" type="text" required class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"></div>
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Salary*</label><input name="salary" type="text" placeholder="e.g. ₹8-12 LPA" required class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"></div>
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Experience*</label><input name="experience" type="text" placeholder="e.g. 5-8 Years" required class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"></div>
-                                <div><label class="block text-sm font-bold text-slate-700 mb-2">Type</label><select name="type" class="w-full border-slate-200 border rounded-xl p-3.5 outline-none focus:border-blue-500"><option>Full-time</option><option>Contract</option></select></div>
-                            </div>
-                            <div><label class="block text-sm font-bold text-slate-700 mb-2">Description*</label><textarea name="description" rows="5" class="w-full border-slate-200 border rounded-xl p-4 focus:border-blue-500 outline-none"></textarea></div>
-                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all">Submit Job Posting</button>
-                        </form>
-                    </div>
+    <section className="py-24 bg-blue-600 overflow-hidden relative">
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full opacity-50 blur-3xl"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+          <div className="max-w-2xl text-white">
+            <h2 className="text-4xl font-extrabold mb-6">Hire Fit-Out Talent Faster</h2>
+            <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+              Post jobs and reach experienced professionals from the corporate interior, workplace design, project execution, procurement, and site coordination industry.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+              {[
+                'Reach industry-specific candidates',
+                'Reduce irrelevant applications',
+                'Hire faster for project-based roles',
+                'Candidates with real fit-out experience'
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <CheckCircle2 size={20} className="text-blue-300" />
+                  <span className="font-medium">{item}</span>
                 </div>
-            </div>`;
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <button onClick={() => setPage('postjob')} className="bg-white text-blue-600 font-extrabold py-4 px-10 rounded-xl hover:bg-slate-100 transition-all shadow-xl focus:outline-none">
+                Post a Job Now
+              </button>
+              <button className="bg-blue-700 text-white font-extrabold py-4 px-10 rounded-xl hover:bg-blue-800 transition-all focus:outline-none">
+                View Pricing
+              </button>
+            </div>
+          </div>
+          <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md">
+            <h3 className="text-2xl font-bold text-slate-900 mb-6">Quick Job Post</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Job Title</label>
+                <input type="text" placeholder="e.g. Project Manager" className="w-full border-slate-200 border rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Specialization</label>
+                <select className="w-full border-slate-200 border rounded-lg p-3 focus:outline-none">
+                  <option>Project Execution</option>
+                  <option>QS & Billing</option>
+                  <option>Design</option>
+                </select>
+              </div>
+              <button 
+                onClick={() => setPage('postjob')}
+                className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mt-4 hover:bg-slate-800 focus:outline-none"
+              >
+                Continue to Post
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+);
+
+const JobListingPage = ({ setPage, jobs }) => {
+  const [selectedDept, setSelectedDept] = useState('All');
+  
+  const currentJobs = jobs && jobs.length > 0 ? jobs : INITIAL_FALLBACK_JOBS;
+
+  const filteredJobs = useMemo(() => {
+    if (selectedDept === 'All') return currentJobs;
+    return currentJobs.filter(j => j.dept === selectedDept);
+  }, [currentJobs, selectedDept]);
+
+  return (
+    <div className="bg-slate-50 min-h-screen py-12 animate-in fade-in duration-500">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          <aside className="w-full md:w-80 space-y-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                  <Filter size={18} /> Filters
+                </h3>
+                <button 
+                  onClick={() => setSelectedDept('All')}
+                  className="text-sm text-blue-600 font-medium hover:underline focus:outline-none"
+                >Reset</button>
+              </div>
+
+              <div className="space-y-8">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-3">Department</label>
+                  <div className="space-y-2">
+                    {['All', 'Project Execution', 'QS & Billing', 'Design', 'Procurement', 'MEP', 'QA/QC', 'HSE', 'Sales'].map((dept) => (
+                      <label key={dept} className="flex items-center gap-3 group cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name="dept" 
+                          checked={selectedDept === dept}
+                          onChange={() => setSelectedDept(dept)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                        />
+                        <span className="text-slate-600 group-hover:text-slate-900 transition-colors text-sm font-medium">{dept}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <main className="flex-1">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+              <div className="flex-1 w-full md:w-auto relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input type="text" placeholder="Search by title..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-slate-900 mb-6">Found {filteredJobs.length} jobs</h2>
+
+            <div className="space-y-6">
+              {filteredJobs.map((job) => (
+                <JobCard key={job.id} job={job} setPage={setPage} />
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PostJobPage = ({ onPost }) => {
+  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const formData = new FormData(e.target);
+    const jobData = {
+      title: formData.get('title'),
+      dept: formData.get('dept'),
+      location: formData.get('location'),
+      experience: formData.get('experience'),
+      salary: formData.get('salary'),
+      type: formData.get('type'),
+      desc: formData.get('desc'),
+      skills: formData.get('skills').split(',').map(s => s.trim()),
+      company: formData.get('company'),
+    };
+    
+    await onPost(jobData);
+    setIsSubmitting(false);
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <div className="bg-slate-50 min-h-screen flex items-center justify-center px-4 animate-in fade-in duration-500">
+        <div className="bg-white p-12 rounded-3xl shadow-xl text-center max-w-md w-full">
+          <div className="w-20 h-20 bg-green-100 text-green-600 flex items-center justify-center rounded-full mx-auto mb-6">
+            <CheckCircle2 size={48} />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">Job Posted!</h2>
+          <button onClick={() => window.location.reload()} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 shadow-lg focus:outline-none">
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-slate-50 py-16 animate-in fade-in duration-500">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+          <div className="bg-slate-900 p-10 text-white">
+            <h1 className="text-3xl font-bold mb-2">Post a New Job</h1>
+          </div>
+          <form className="p-10 space-y-8" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <input name="title" required placeholder="Job Title*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+                <input name="company" required placeholder="Company Name*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+                <select name="dept" className="w-full border-slate-200 border rounded-xl p-3.5 bg-white outline-none">
+                  <option>Project Execution</option>
+                  <option>QS & Billing</option>
+                  <option>Estimation & Tendering</option>
+                </select>
+                <input name="location" type="text" placeholder="Location*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+              </div>
+              <div className="space-y-6">
+                <input name="experience" placeholder="Experience Required*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+                <input name="salary" placeholder="Salary Range" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+                <div className="flex gap-4">
+                  {['Full-time', 'Contract'].map((t) => (
+                    <label key={t} className="flex-1 flex items-center justify-center border border-slate-200 rounded-xl p-3 cursor-pointer">
+                      <input type="radio" name="type" value={t} defaultChecked={t === 'Full-time'} className="hidden" />
+                      <span className="text-sm font-bold text-slate-700">{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <textarea name="desc" rows={6} className="w-full border-slate-200 border rounded-xl p-4 outline-none" placeholder="Description*"></textarea>
+            <input name="skills" placeholder="Skills (comma separated)*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="w-full bg-blue-600 text-white font-extrabold py-4 px-12 rounded-xl shadow-xl disabled:opacity-50"
+            >
+              {isSubmitting ? 'Posting...' : 'Post Job Opening'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Footer = () => (
+  <footer className="bg-slate-900 text-slate-400 py-10 mt-10">
+    <div className="max-w-7xl mx-auto px-4 text-center">
+      <p>© 2024 FitoutJobs Portal. All rights reserved.</p>
+    </div>
+  </footer>
+);
+
+export default function App() {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [authError, setAuthError] = useState(null);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          // Attempt anonymous sign-in
+          try {
+            await signInAnonymously(auth);
+          } catch (e) {
+            // Configuration error usually means anonymous auth is not enabled in Firebase Console
+            console.error("Anonymous auth failed. Check Firebase console settings.", e);
+            setAuthError("Authentication configuration issue. Please check console.");
+          }
+        }
+      } catch (err) {
+        console.error("Auth Error:", err);
+        setAuthError(err.message);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const jobsCol = collection(db, 'artifacts', appId, 'public', 'data', 'jobs');
+    const unsubscribe = onSnapshot(jobsCol, (snapshot) => {
+      const jobsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      const sortedJobs = jobsList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setJobs(sortedJobs);
+    }, (err) => {
+      console.error("Firestore Error:", err);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const handlePostJob = async (jobData) => {
+    if (!user) return;
+    try {
+      const jobsCol = collection(db, 'artifacts', appId, 'public', 'data', 'jobs');
+      await addDoc(jobsCol, {
+        ...jobData,
+        createdAt: serverTimestamp(),
+        userId: user.uid
+      });
+    } catch (err) {
+      console.error("Add Doc Error:", err);
+    }
+  };
+
+  const renderPage = () => {
+    if (authError && jobs.length === 0) {
+      return (
+        <div className="p-10 text-center">
+          <p className="text-red-500 font-bold mb-4">Auth Error: {authError}</p>
+          <p className="text-slate-500">Note: Ensure "Anonymous" sign-in is enabled in your Firebase Authentication settings.</p>
+          <div className="mt-10">
+             <HomePage setPage={setCurrentPage} jobs={INITIAL_FALLBACK_JOBS} />
+          </div>
+        </div>
+      );
     }
 
-    // Other renderers (Home, Login) remain the same as before...
-    function renderHome() { /* Same as previous version */ }
-    function renderLogin() { /* Same as previous version */ }
+    switch(currentPage) {
+      case 'home': return <HomePage setPage={setCurrentPage} jobs={jobs} />;
+      case 'jobs': return <JobListingPage setPage={setCurrentPage} jobs={jobs} />;
+      case 'postjob': return <PostJobPage onPost={handlePostJob} />;
+      default: return <HomePage setPage={setCurrentPage} jobs={jobs} />;
+    }
+  };
 
-    // Initial Load
-    window.addEventListener('load', () => {
-        navigateTo('home');
-    });
-</script>
-</body>
-</html>
+  return (
+    <div className="min-h-screen font-sans">
+      <Navbar currentPage={currentPage} setPage={setCurrentPage} user={user} />
+      <main className="transition-all duration-300">
+        {renderPage()}
+      </main>
+      <Footer />
+      {isScrolled && (
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 bg-white border border-slate-200 p-3 rounded-full shadow-2xl z-40"
+        >
+          <ChevronDown className="rotate-180 text-slate-600" />
+        </button>
+      )}
+    </div>
+  );
+}
