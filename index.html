@@ -26,7 +26,7 @@ import {
 } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-// Priority 1: Environment config, Priority 2: User provided config
+// Use environment config if available, otherwise use provided keys
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
   ? JSON.parse(__firebase_config) 
   : {
@@ -46,7 +46,6 @@ const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'fitout-pro';
 
 // --- Static Data ---
-
 const JOB_CATEGORIES = [
   { id: 'pm', title: 'Project Management', icon: HardHat, count: 42, desc: 'For project managers, site leads, and operations professionals handling commercial fit-outs.' },
   { id: 'qs', title: 'Quantity Surveying', icon: Ruler, count: 28, desc: 'For QS professionals handling measurements, BOQ checking, and rate analysis.' },
@@ -56,10 +55,6 @@ const JOB_CATEGORIES = [
   { id: 'procurement', title: 'Procurement', icon: ShoppingCart, count: 12, desc: 'For executives handling vendor development, material sourcing, and purchase orders.' },
   { id: 'mep', title: 'MEP Coordination', icon: Layers, count: 21, desc: 'For HVAC, electrical, plumbing, firefighting, and services coordination roles.' },
   { id: 'qa', title: 'QA/QC & HSE', icon: ShieldCheck, count: 8, desc: 'For quality engineers, safety officers, and inspection documentation.' },
-  { id: 'bd', title: 'Business Development', icon: TrendingUp, count: 25, desc: 'For sales, client acquisition, and corporate relations in interior contracting.' },
-  { id: 'accounts', title: 'Accounts & Finance', icon: Wallet, count: 14, desc: 'For project accounts, vendor payments, and client invoicing.' },
-  { id: 'runner', title: 'Runner / Office Support', icon: Truck, count: 7, desc: 'For document collection, material movement, and site-to-office coordination.' },
-  { id: 'store', title: 'Store & Inventory', icon: Package, count: 11, desc: 'For site store management, stock registers, and material inward/outward records.' },
 ];
 
 const INITIAL_FALLBACK_JOBS = [
@@ -128,7 +123,10 @@ const Navbar = ({ currentPage, setPage, user }) => {
           </div>
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
-              <span className="text-xs text-slate-400 font-mono">ID: {user.uid.slice(0, 8)}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-mono bg-slate-50 px-2 py-1 rounded">ID: {user.uid.slice(0, 8)}</span>
+                <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-500 transition-colors"><LogOut size={18} /></button>
+              </div>
             ) : (
               <button 
                 onClick={() => setPage('login')}
@@ -139,7 +137,7 @@ const Navbar = ({ currentPage, setPage, user }) => {
             )}
             <button 
               onClick={() => setPage('postjob')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2 focus:outline-none"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2 focus:outline-none active:scale-95"
             >
               <PlusCircle size={18} />
               Post a Job
@@ -166,27 +164,30 @@ const Navbar = ({ currentPage, setPage, user }) => {
 };
 
 const JobCard = ({ job, setPage }) => (
-  <div className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl p-5 shadow-sm hover:shadow-md transition-all group">
+  <div className="bg-white border border-slate-100 hover:border-blue-300 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group">
     <div className="flex justify-between items-start mb-4">
-      <div>
-        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{job.title}</h3>
-        <p className="text-slate-600 flex items-center gap-1 mt-1 font-medium">
-          <Building2 size={16} /> {job.company}
-        </p>
+      <div className="flex gap-4">
+        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-blue-50 transition-colors">
+            <Building2 className="text-slate-400 group-hover:text-blue-600" size={24} />
+        </div>
+        <div>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{job.title}</h3>
+            <p className="text-slate-500 font-medium">{job.company}</p>
+        </div>
       </div>
-      <button className="text-slate-400 hover:text-blue-600 transition-colors focus:outline-none">
+      <button className="text-slate-300 hover:text-blue-600 transition-colors focus:outline-none">
         <Star size={20} />
       </button>
     </div>
-    <div className="grid grid-cols-2 gap-y-2 mb-4 text-sm text-slate-500">
-      <div className="flex items-center gap-2"><MapPin size={16} /> {job.location}</div>
-      <div className="flex items-center gap-2"><Briefcase size={16} /> {job.experience}</div>
-      <div className="flex items-center gap-2"><DollarSign size={16} /> {job.salary}</div>
-      <div className="flex items-center gap-2"><Clock size={16} /> {job.posted || 'Recent'}</div>
+    <div className="grid grid-cols-2 gap-y-3 mb-5 text-sm text-slate-500 font-medium">
+      <div className="flex items-center gap-2"><MapPin size={16} className="text-slate-400" /> {job.location}</div>
+      <div className="flex items-center gap-2"><Briefcase size={16} className="text-slate-400" /> {job.experience}</div>
+      <div className="flex items-center gap-2"><DollarSign size={16} className="text-slate-400" /> {job.salary}</div>
+      <div className="flex items-center gap-2"><Clock size={16} className="text-slate-400" /> {job.posted || 'Recent'}</div>
     </div>
-    <div className="flex flex-wrap gap-2 mb-5">
+    <div className="flex flex-wrap gap-2 mb-6">
       {job.skills && job.skills.map((skill, idx) => (
-        <span key={idx} className="bg-slate-50 text-slate-600 px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider">
+        <span key={idx} className="bg-slate-50 text-slate-500 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">
           {skill}
         </span>
       ))}
@@ -194,11 +195,11 @@ const JobCard = ({ job, setPage }) => (
     <div className="flex gap-2">
       <button 
         onClick={() => setPage('jobs')}
-        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold transition-colors text-center focus:outline-none"
+        className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition-all text-center focus:outline-none active:scale-95"
       >
         Apply Now
       </button>
-      <button className="px-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors focus:outline-none">
+      <button className="px-4 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all focus:outline-none">
         <ChevronRight size={20} className="text-slate-600" />
       </button>
     </div>
@@ -209,164 +210,100 @@ const JobCard = ({ job, setPage }) => (
 
 const HomePage = ({ setPage, jobs }) => (
   <div className="animate-in fade-in duration-500">
-    <section className="relative bg-slate-900 text-white overflow-hidden min-h-[600px] flex items-center">
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent z-10 md:w-3/4"></div>
-        <img 
-          src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=2000" 
-          className="absolute right-0 top-0 h-full w-full md:w-1/2 object-cover opacity-60" 
-          alt="Modern Corporate Office"
-        />
-      </div>
-
-      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="max-w-2xl">
-          <p className="text-blue-400 font-bold uppercase tracking-widest text-sm mb-4">The Niche Platform</p>
-          <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
-            Find Jobs in <br/>
-            <span className="text-blue-400">Corporate Interior Fit-Out</span>
-          </h1>
-          <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-            A dedicated job platform for project, design, estimation, billing, procurement, accounts, and site coordination roles in the commercial interior industry.
-          </p>
-
-          <div className="bg-white p-2 rounded-xl shadow-2xl flex flex-col md:flex-row gap-2 max-w-4xl border border-slate-700/50">
-            <div className="flex-1 flex items-center px-4 border-r border-slate-100 py-3">
-              <Search className="text-slate-400 mr-3" size={20} />
-              <input type="text" placeholder="Job Title, Keyword or Role" className="w-full focus:outline-none text-slate-900 font-medium" />
+    <section className="relative min-h-[600px] flex items-center overflow-hidden bg-slate-900">
+        <div className="absolute inset-0 z-0 flex">
+            <div className="w-full md:w-3/5 bg-slate-900 flex flex-col justify-center px-6 md:px-20 relative z-10">
+                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-transparent to-slate-900 hidden md:block"></div>
             </div>
-            <div className="flex-1 flex items-center px-4 py-3">
-              <MapPin className="text-slate-400 mr-3" size={20} />
-              <input type="text" placeholder="City or Region" className="w-full focus:outline-none text-slate-900 font-medium" />
+            <div className="hidden md:block w-2/5 relative">
+                <img 
+                    src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=2000" 
+                    className="absolute inset-0 h-full w-full object-cover" 
+                    alt="Corporate Workspace"
+                />
             </div>
-            <button 
-              onClick={() => setPage('jobs')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-all flex items-center justify-center gap-2 focus:outline-none"
-            >
-              Find Jobs <ArrowRight size={20} />
-            </button>
-          </div>
-          <p className="mt-6 text-sm text-slate-400 font-medium italic">
-            Built for interior contractors, PMCs, design firms, vendors, and fit-out professionals.
-          </p>
         </div>
-      </div>
+
+        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="max-w-2xl text-white">
+                <p className="text-blue-400 font-bold uppercase tracking-[0.2em] text-xs mb-4">India's First Niche Portal</p>
+                <h1 className="text-5xl md:text-7xl font-extrabold mb-8 leading-[1.1]">
+                    Transforming <br/>
+                    <span className="text-blue-400">The Workplace</span>
+                </h1>
+                <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-lg">
+                    Expert knowledge for project, design, and site coordination roles in the commercial interior fit-out industry.
+                </p>
+
+                <div className="bg-white p-2 rounded-2xl shadow-2xl flex flex-col md:flex-row gap-2 max-w-2xl border border-slate-700/50">
+                    <div className="flex-1 flex items-center px-4 border-r border-slate-100 py-3">
+                        <Search className="text-slate-400 mr-3" size={20} />
+                        <input type="text" placeholder="Quantity Surveyor, PM..." className="w-full focus:outline-none text-slate-900 font-medium" />
+                    </div>
+                    <button 
+                        onClick={() => setPage('jobs')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-xl transition-all flex items-center justify-center gap-2 focus:outline-none active:scale-95"
+                    >
+                        Find Jobs <ArrowRight size={20} />
+                    </button>
+                </div>
+            </div>
+        </div>
     </section>
 
-    <section className="py-24 bg-white">
+    <section className="py-24 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-end mb-12">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
           <div>
-            <h2 className="text-3xl font-extrabold text-slate-900">Popular Categories</h2>
-            <p className="text-slate-500 mt-2 text-lg">Explore roles based on your specialization</p>
+            <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Recent Opportunities</h2>
+            <p className="text-slate-500 mt-2 text-lg">Latest openings from top interior contractors.</p>
           </div>
-          <button onClick={() => setPage('jobs')} className="hidden md:flex items-center text-blue-600 font-bold hover:underline gap-1 focus:outline-none">
-            Browse All Roles <ChevronRight size={18} />
+          <button onClick={() => setPage('jobs')} className="bg-white border-2 border-slate-200 hover:border-blue-600 text-slate-900 font-bold py-3 px-8 rounded-xl transition-all shadow-sm focus:outline-none">
+            View All Openings
           </button>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {JOB_CATEGORIES.map((cat) => (
-            <div 
-              key={cat.id} 
-              className="bg-slate-50 border border-slate-100 p-6 rounded-2xl hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all cursor-pointer group"
-              onClick={() => setPage('jobs')}
-            >
-              <div className="w-14 h-14 bg-white border border-slate-200 flex items-center justify-center rounded-xl mb-5 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
-                <cat.icon className="text-blue-600 w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">{cat.title}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-4">{cat.desc}</p>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-blue-600 font-bold">{cat.count} Open Jobs</span>
-                <span className="bg-slate-200 text-slate-600 w-8 h-8 flex items-center justify-center rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  <ChevronRight size={16} />
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <section className="py-24 bg-slate-50 border-y border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-extrabold text-slate-900">Featured Job Openings</h2>
-          <p className="text-slate-500 mt-4 text-xl max-w-2xl mx-auto">Latest opportunities from top design-build firms and fit-out contractors.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {(jobs && jobs.length > 0 ? jobs : INITIAL_FALLBACK_JOBS).slice(0, 6).map((job) => (
             <JobCard key={job.id} job={job} setPage={setPage} />
           ))}
         </div>
-        <div className="mt-16 text-center">
-          <button 
-            onClick={() => setPage('jobs')}
-            className="bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-700 font-bold py-4 px-10 rounded-xl transition-all shadow-sm focus:outline-none"
-          >
-            View More Openings
-          </button>
+      </div>
+    </section>
+
+    <section className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+            <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Popular Categories</h2>
+            <p className="text-slate-500 mt-4 text-lg max-w-2xl mx-auto">Focused on every aspect of corporate workspace execution.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {JOB_CATEGORIES.map((cat) => (
+            <div 
+              key={cat.id} 
+              className="bg-slate-50 border border-slate-100 p-8 rounded-3xl hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all cursor-pointer group text-center"
+              onClick={() => setPage('jobs')}
+            >
+              <div className="w-16 h-16 bg-white border border-slate-200 flex items-center justify-center rounded-2xl mb-6 mx-auto group-hover:bg-blue-600 group-hover:border-blue-600 transition-all">
+                <cat.icon className="text-blue-600 group-hover:text-white transition-colors w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">{cat.title}</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">{cat.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
 
-    <section className="py-24 bg-blue-600 overflow-hidden relative">
-      <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full opacity-50 blur-3xl"></div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-          <div className="max-w-2xl text-white">
-            <h2 className="text-4xl font-extrabold mb-6">Hire Fit-Out Talent Faster</h2>
-            <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-              Post jobs and reach experienced professionals from the corporate interior, workplace design, project execution, procurement, and site coordination industry.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-              {[
-                'Reach industry-specific candidates',
-                'Reduce irrelevant applications',
-                'Hire faster for project-based roles',
-                'Candidates with real fit-out experience'
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <CheckCircle2 size={20} className="text-blue-300" />
-                  <span className="font-medium">{item}</span>
-                </div>
-              ))}
+    <section className="py-24 bg-blue-600 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 text-center relative z-10">
+            <h2 className="text-4xl font-extrabold text-white mb-6">Hire the best Fit-out Talent</h2>
+            <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">Reach professionals specifically experienced in commercial interiors and workplace design.</p>
+            <div className="flex flex-wrap justify-center gap-4">
+                <button onClick={() => setPage('postjob')} className="bg-white text-blue-600 font-extrabold py-5 px-12 rounded-2xl hover:bg-slate-50 transition-all shadow-xl active:scale-95">Post a Job Now</button>
+                <button className="bg-blue-700 text-white font-extrabold py-5 px-12 rounded-2xl hover:bg-blue-800 transition-all active:scale-95">View Pricing</button>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <button onClick={() => setPage('postjob')} className="bg-white text-blue-600 font-extrabold py-4 px-10 rounded-xl hover:bg-slate-100 transition-all shadow-xl focus:outline-none">
-                Post a Job Now
-              </button>
-              <button className="bg-blue-700 text-white font-extrabold py-4 px-10 rounded-xl hover:bg-blue-800 transition-all focus:outline-none">
-                View Pricing
-              </button>
-            </div>
-          </div>
-          <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md">
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">Quick Job Post</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Job Title</label>
-                <input type="text" placeholder="e.g. Project Manager" className="w-full border-slate-200 border rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Specialization</label>
-                <select className="w-full border-slate-200 border rounded-lg p-3 focus:outline-none">
-                  <option>Project Execution</option>
-                  <option>QS & Billing</option>
-                  <option>Design</option>
-                </select>
-              </div>
-              <button 
-                onClick={() => setPage('postjob')}
-                className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mt-4 hover:bg-slate-800 focus:outline-none"
-              >
-                Continue to Post
-              </button>
-            </div>
-          </div>
         </div>
-      </div>
     </section>
   </div>
 );
@@ -382,35 +319,35 @@ const JobListingPage = ({ setPage, jobs }) => {
   }, [currentJobs, selectedDept]);
 
   return (
-    <div className="bg-slate-50 min-h-screen py-12 animate-in fade-in duration-500">
+    <div className="bg-slate-50 min-h-screen py-16 animate-in fade-in duration-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-10">
           <aside className="w-full md:w-80 space-y-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                  <Filter size={18} /> Filters
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="font-bold text-slate-900 text-xl flex items-center gap-2">
+                  <Filter size={20} className="text-blue-600" /> Filters
                 </h3>
                 <button 
                   onClick={() => setSelectedDept('All')}
-                  className="text-sm text-blue-600 font-medium hover:underline focus:outline-none"
+                  className="text-sm text-blue-600 font-bold hover:underline focus:outline-none"
                 >Reset</button>
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-10">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-3">Department</label>
-                  <div className="space-y-2">
-                    {['All', 'Project Execution', 'QS & Billing', 'Design', 'Procurement', 'MEP', 'QA/QC', 'HSE', 'Sales'].map((dept) => (
+                  <label className="block text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Department</label>
+                  <div className="space-y-3">
+                    {['All', 'Project Execution', 'QS & Billing', 'Design', 'Procurement', 'MEP'].map((dept) => (
                       <label key={dept} className="flex items-center gap-3 group cursor-pointer">
                         <input 
                           type="radio" 
                           name="dept" 
                           checked={selectedDept === dept}
                           onChange={() => setSelectedDept(dept)}
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                          className="w-5 h-5 text-blue-600 border-slate-200 focus:ring-blue-500 cursor-pointer" 
                         />
-                        <span className="text-slate-600 group-hover:text-slate-900 transition-colors text-sm font-medium">{dept}</span>
+                        <span className={`text-sm font-bold transition-colors ${selectedDept === dept ? 'text-slate-900' : 'text-slate-500 group-hover:text-slate-700'}`}>{dept}</span>
                       </label>
                     ))}
                   </div>
@@ -420,16 +357,18 @@ const JobListingPage = ({ setPage, jobs }) => {
           </aside>
 
           <main className="flex-1">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
               <div className="flex-1 w-full md:w-auto relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input type="text" placeholder="Search by title..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <input type="text" placeholder="Search by title..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-600/20 outline-none" />
               </div>
             </div>
 
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Found {filteredJobs.length} jobs</h2>
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Available Positions ({filteredJobs.length})</h2>
+            </div>
 
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {filteredJobs.map((job) => (
                 <JobCard key={job.id} job={job} setPage={setPage} />
               ))}
@@ -470,11 +409,12 @@ const PostJobPage = ({ onPost }) => {
     return (
       <div className="bg-slate-50 min-h-screen flex items-center justify-center px-4 animate-in fade-in duration-500">
         <div className="bg-white p-12 rounded-3xl shadow-xl text-center max-w-md w-full">
-          <div className="w-20 h-20 bg-green-100 text-green-600 flex items-center justify-center rounded-full mx-auto mb-6">
+          <div className="w-20 h-20 bg-green-100 text-green-600 flex items-center justify-center rounded-full mx-auto mb-8 shadow-xl shadow-green-100">
             <CheckCircle2 size={48} />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">Job Posted!</h2>
-          <button onClick={() => window.location.reload()} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 shadow-lg focus:outline-none">
+          <h2 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">Job Published!</h2>
+          <p className="text-slate-500 mb-10 leading-relaxed">Your listing is now live and visible to all fit-out professionals on the platform.</p>
+          <button onClick={() => window.location.reload()} className="w-full bg-slate-900 text-white font-bold py-5 rounded-2xl hover:bg-slate-800 shadow-lg transition-all active:scale-95">
             Back to Home
           </button>
         </div>
@@ -483,46 +423,71 @@ const PostJobPage = ({ onPost }) => {
   }
 
   return (
-    <div className="bg-slate-50 py-16 animate-in fade-in duration-500">
+    <div className="bg-slate-50 py-20 animate-in fade-in duration-500">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-          <div className="bg-slate-900 p-10 text-white">
-            <h1 className="text-3xl font-bold mb-2">Post a New Job</h1>
+        <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+          <div className="bg-slate-900 p-12 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-10 opacity-10"><PlusCircle size={140} /></div>
+            <h1 className="text-4xl font-extrabold mb-4 tracking-tight">Post a New Job</h1>
+            <p className="text-slate-400 text-lg max-w-md">Connect with the industry's most skilled professionals.</p>
           </div>
-          <form className="p-10 space-y-8" onSubmit={handleSubmit}>
+          <form className="p-12 space-y-10" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <input name="title" required placeholder="Job Title*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
-                <input name="company" required placeholder="Company Name*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
-                <select name="dept" className="w-full border-slate-200 border rounded-xl p-3.5 bg-white outline-none">
-                  <option>Project Execution</option>
-                  <option>QS & Billing</option>
-                  <option>Estimation & Tendering</option>
-                </select>
-                <input name="location" type="text" placeholder="Location*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Basic Details</label>
+                    <input name="title" required placeholder="Job Title*" className="w-full border-slate-200 border-2 rounded-2xl p-4 focus:border-blue-600 outline-none transition-colors" />
+                    <input name="company" required placeholder="Company Name*" className="w-full border-slate-200 border-2 rounded-2xl p-4 focus:border-blue-600 outline-none transition-colors" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Department</label>
+                    <select name="dept" className="w-full border-slate-200 border-2 rounded-2xl p-4 bg-white outline-none focus:border-blue-600 transition-colors">
+                        <option>Project Execution</option>
+                        <option>QS & Billing</option>
+                        <option>Estimation & Tendering</option>
+                        <option>Design</option>
+                        <option>MEP</option>
+                    </select>
+                </div>
               </div>
               <div className="space-y-6">
-                <input name="experience" placeholder="Experience Required*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
-                <input name="salary" placeholder="Salary Range" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
-                <div className="flex gap-4">
-                  {['Full-time', 'Contract'].map((t) => (
-                    <label key={t} className="flex-1 flex items-center justify-center border border-slate-200 rounded-xl p-3 cursor-pointer">
-                      <input type="radio" name="type" value={t} defaultChecked={t === 'Full-time'} className="hidden" />
-                      <span className="text-sm font-bold text-slate-700">{t}</span>
-                    </label>
-                  ))}
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Requirements</label>
+                    <input name="location" type="text" placeholder="Location*" className="w-full border-slate-200 border-2 rounded-2xl p-4 focus:border-blue-600 outline-none transition-colors" />
+                    <input name="experience" placeholder="Experience Required*" className="w-full border-slate-200 border-2 rounded-2xl p-4 focus:border-blue-600 outline-none transition-colors" />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Salary & Type</label>
+                    <input name="salary" placeholder="Salary Range" className="w-full border-slate-200 border-2 rounded-2xl p-4 focus:border-blue-600 outline-none transition-colors" />
+                    <div className="flex gap-4 pt-2">
+                        {['Full-time', 'Contract'].map((t) => (
+                            <label key={t} className="flex-1 flex items-center justify-center border-2 border-slate-100 rounded-2xl p-4 cursor-pointer hover:border-blue-600 transition-all has-[:checked]:bg-blue-50 has-[:checked]:border-blue-600">
+                                <input type="radio" name="type" value={t} defaultChecked={t === 'Full-time'} className="hidden" />
+                                <span className="text-sm font-bold text-slate-900">{t}</span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
               </div>
             </div>
-            <textarea name="desc" rows={6} className="w-full border-slate-200 border rounded-xl p-4 outline-none" placeholder="Description*"></textarea>
-            <input name="skills" placeholder="Skills (comma separated)*" className="w-full border-slate-200 border rounded-xl p-3.5 outline-none" />
-            <button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white font-extrabold py-4 px-12 rounded-xl shadow-xl disabled:opacity-50"
-            >
-              {isSubmitting ? 'Posting...' : 'Post Job Opening'}
-            </button>
+            <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Job Description</label>
+                <textarea name="desc" rows={6} className="w-full border-slate-200 border-2 rounded-2xl p-4 outline-none focus:border-blue-600 transition-colors resize-none" placeholder="Detail the role responsibilities..."></textarea>
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Skills</label>
+                <input name="skills" placeholder="Skills (comma separated)*" className="w-full border-slate-200 border-2 rounded-2xl p-4 outline-none focus:border-blue-600 transition-colors" />
+            </div>
+            <div className="pt-10 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                <p className="text-sm text-slate-400 italic">By clicking publish, you agree to our terms of service.</p>
+                <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-5 px-16 rounded-2xl shadow-xl transition-all focus:outline-none disabled:opacity-50 active:scale-95"
+                >
+                {isSubmitting ? 'Syncing...' : 'Publish Job Listing'}
+                </button>
+            </div>
           </form>
         </div>
       </div>
@@ -531,9 +496,36 @@ const PostJobPage = ({ onPost }) => {
 };
 
 const Footer = () => (
-  <footer className="bg-slate-900 text-slate-400 py-10 mt-10">
-    <div className="max-w-7xl mx-auto px-4 text-center">
-      <p>© 2024 FitoutJobs Portal. All rights reserved.</p>
+  <footer className="bg-slate-900 text-slate-400 py-20">
+    <div className="max-w-7xl mx-auto px-4 text-center md:text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-b border-slate-800 pb-16 mb-16">
+            <div className="space-y-6">
+                <div className="flex items-center space-x-2 justify-center md:justify-start">
+                    <div className="w-10 h-10 bg-blue-600 flex items-center justify-center rounded-lg">
+                        <LayoutGrid className="text-white w-6 h-6" />
+                    </div>
+                    <span className="text-2xl font-bold text-white tracking-tight">FitoutJobs</span>
+                </div>
+                <p className="text-slate-500 leading-relaxed max-w-sm">The niche marketplace for corporate interior professionals in India.</p>
+            </div>
+            <div className="grid grid-cols-2 col-span-2 gap-8 text-sm">
+                <div className="space-y-4">
+                    <h4 className="text-white font-bold uppercase tracking-widest text-xs">For Talent</h4>
+                    <ul className="space-y-2">
+                        <li><a href="#" className="hover:text-blue-400 transition-colors">Browse Jobs</a></li>
+                        <li><a href="#" className="hover:text-blue-400 transition-colors">Career Advice</a></li>
+                    </ul>
+                </div>
+                <div className="space-y-4">
+                    <h4 className="text-white font-bold uppercase tracking-widest text-xs">Support</h4>
+                    <ul className="space-y-2">
+                        <li><a href="#" className="hover:text-blue-400 transition-colors">Contact Us</a></li>
+                        <li><a href="#" className="hover:text-blue-400 transition-colors">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+      <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-700">© 2024 FitoutJobs India. Professional Portal.</p>
     </div>
   </footer>
 );
@@ -554,20 +546,22 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Rule 3: Auth Before Queries. Priority to environment config.
+        const currentFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
+        
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-          // Attempt anonymous sign-in
           try {
             await signInAnonymously(auth);
           } catch (e) {
-            // Configuration error usually means anonymous auth is not enabled in Firebase Console
-            console.error("Anonymous auth failed. Check Firebase console settings.", e);
-            setAuthError("Authentication configuration issue. Please check console.");
+            console.error("Anonymous auth failed.", e);
+            // Even if sign-in fails, we try to set a fallback error state
+            setAuthError("Firebase Authentication issue: Please ensure Anonymous Authentication is enabled in your Firebase Console (Authentication > Sign-in method).");
           }
         }
       } catch (err) {
-        console.error("Auth Error:", err);
+        console.error("Top-level Auth Error:", err);
         setAuthError(err.message);
       }
     };
@@ -577,13 +571,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return; // Guard Firestore operations until user is authenticated (Rule 3)
+    
+    // Rule 1: Use specific artifacts paths
     const jobsCol = collection(db, 'artifacts', appId, 'public', 'data', 'jobs');
+    
     const unsubscribe = onSnapshot(jobsCol, (snapshot) => {
       const jobsList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      // Rule 2: Sort in memory
       const sortedJobs = jobsList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setJobs(sortedJobs);
     }, (err) => {
@@ -607,14 +605,16 @@ export default function App() {
   };
 
   const renderPage = () => {
+    // If auth error occurred but we have no jobs, show a helper UI with fallbacks
     if (authError && jobs.length === 0) {
       return (
-        <div className="p-10 text-center">
-          <p className="text-red-500 font-bold mb-4">Auth Error: {authError}</p>
-          <p className="text-slate-500">Note: Ensure "Anonymous" sign-in is enabled in your Firebase Authentication settings.</p>
-          <div className="mt-10">
-             <HomePage setPage={setCurrentPage} jobs={INITIAL_FALLBACK_JOBS} />
+        <div className="bg-white min-h-screen">
+          <div className="bg-amber-50 border-b border-amber-100 p-4 text-center">
+            <p className="text-amber-700 font-bold text-sm flex items-center justify-center gap-2">
+                <ShieldCheck size={16} /> Configuration Required: Enable "Anonymous Authentication" in your Firebase Console to sync live jobs.
+            </p>
           </div>
+          <HomePage setPage={setCurrentPage} jobs={INITIAL_FALLBACK_JOBS} />
         </div>
       );
     }
@@ -623,12 +623,35 @@ export default function App() {
       case 'home': return <HomePage setPage={setCurrentPage} jobs={jobs} />;
       case 'jobs': return <JobListingPage setPage={setCurrentPage} jobs={jobs} />;
       case 'postjob': return <PostJobPage onPost={handlePostJob} />;
+      case 'login': return (
+        <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 p-4 animate-in fade-in duration-500">
+          <div className="bg-white p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100 text-center">
+            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-100"><User className="text-white" size={40} /></div>
+            <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Welcome</h2>
+            <p className="text-slate-500 mb-10">Access your professional dashboard.</p>
+            <div className="space-y-4">
+              <button className="w-full flex items-center justify-center gap-4 border-2 border-slate-100 py-4 rounded-2xl hover:bg-slate-50 font-bold text-slate-700 transition-all active:scale-95">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" className="w-5 h-5" alt="LinkedIn" /> Continue with LinkedIn
+              </button>
+              <div className="flex items-center gap-4 text-slate-200 py-4">
+                <div className="flex-1 h-px bg-slate-100"></div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
+                <div className="flex-1 h-px bg-slate-100"></div>
+              </div>
+              <input type="email" placeholder="Professional Email" className="w-full border-2 border-slate-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all" />
+              <button onClick={() => setCurrentPage('home')} className="w-full bg-slate-900 text-white font-bold py-5 rounded-2xl mt-4 hover:bg-slate-800 transition-all shadow-lg active:scale-95">
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      );
       default: return <HomePage setPage={setCurrentPage} jobs={jobs} />;
     }
   };
 
   return (
-    <div className="min-h-screen font-sans">
+    <div className="min-h-screen font-sans antialiased text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       <Navbar currentPage={currentPage} setPage={setCurrentPage} user={user} />
       <main className="transition-all duration-300">
         {renderPage()}
@@ -637,9 +660,9 @@ export default function App() {
       {isScrolled && (
         <button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-8 right-8 bg-white border border-slate-200 p-3 rounded-full shadow-2xl z-40"
+          className="fixed bottom-10 right-10 bg-white border border-slate-200 p-4 rounded-full shadow-2xl z-40 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 active:scale-90"
         >
-          <ChevronDown className="rotate-180 text-slate-600" />
+          <ChevronDown className="rotate-180" size={24} />
         </button>
       )}
     </div>
